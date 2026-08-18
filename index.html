@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Ledger — Habit Tracker</title>
+<meta name="theme-color" content="#EDE6D6">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="page">
+
+  <header class="cover">
+    <div class="cover-top">
+      <span class="eyebrow">Kept by</span>
+      <span class="owner" id="ownerLabel">you</span>
+    </div>
+    <h1 class="title">The Ledger</h1>
+    <p class="today" id="todayLabel">—</p>
+  </header>
+
+  <section class="stamps" id="statsRow" aria-label="Overview">
+    <div class="stamp">
+      <span class="stamp-num" id="statActive">0</span>
+      <span class="stamp-label">kept today</span>
+    </div>
+    <div class="stamp">
+      <span class="stamp-num" id="statBest">0</span>
+      <span class="stamp-label">best streak</span>
+    </div>
+    <div class="stamp">
+      <span class="stamp-num" id="statTotal">0</span>
+      <span class="stamp-label">habits</span>
+    </div>
+  </section>
+
+  <section class="ledger" id="ledger" aria-label="Habits">
+    <!-- habit rows injected here -->
+  </section>
+
+  <p class="empty" id="emptyState" hidden>
+    Blank page. Add the first habit you want to keep below.
+  </p>
+
+  <form class="add-row" id="addForm">
+    <input type="text" id="habitInput" placeholder="Add a habit, e.g. Read 10 pages" maxlength="60" autocomplete="off" required>
+    <button type="submit" aria-label="Add habit">Add</button>
+  </form>
+
+  <footer class="foot">
+    <button class="ghost-btn" id="whoBtn">Whose phone is this?</button>
+    <span class="foot-note">Stored only on this device.</span>
+  </footer>
+
+</div>
+
+<div class="modal" id="whoModal" hidden>
+  <div class="modal-card">
+    <h2>Whose ledger is this?</h2>
+    <p>This name only shows on this phone's copy — it doesn't sync anywhere.</p>
+    <input type="text" id="whoInput" placeholder="e.g. Baba, Amma, or your name" maxlength="30">
+    <div class="modal-actions">
+      <button class="ghost-btn" id="whoCancel">Cancel</button>
+      <button class="primary-btn" id="whoSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
