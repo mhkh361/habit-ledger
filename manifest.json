@@ -1,13 +1,13 @@
 {
-  "name": "The Ledger — Habit Tracker",
-  "short_name": "Ledger",
-  "description": "A simple, private, offline habit tracker.",
+  "name": "Habit Ledger — Cognitive Workspace",
+  "short_name": "HabitLedger",
+  "description": "Cognitive Personal Workspace & Habit Tracker with Time-blocking, AI Briefings and Milestones.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#EDE6D6",
-  "theme_color": "#EDE6D6",
-  "orientation": "portrait",
+  "background_color": "#0D0E11",
+  "theme_color": "#0D0E11",
+  "orientation": "any",
   "icons": [
     { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
     { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }

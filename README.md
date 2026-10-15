@@ -25,8 +25,9 @@ GitHub Pages is free and does this for you:
    works on github.com — "Add file" → "Upload files").
 4. Go to the repo's **Settings → Pages**. Under "Source" pick the
    `main` branch and `/ (root)`, then save.
-5. GitHub gives you a link like:
-   `https://your-username.github.io/habit-ledger/`
+5. GitHub gives you your app's live link:
+   `https://mhkh361.github.io/-habit-ledger-/`
+   (Note: The address matches your exact repo name, including dashes).
    That's your app's permanent free address.
 
 ## Step 2 — Install it on each phone

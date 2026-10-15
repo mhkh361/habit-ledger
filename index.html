@@ -1,77 +1,572 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>The Ledger — Habit Tracker</title>
-<meta name="theme-color" content="#EDE6D6">
-<link rel="manifest" href="manifest.json">
-<link rel="icon" href="icon-192.png">
-<link rel="apple-touch-icon" href="icon-192.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>The Ledger — Macrish Sun-Core J.A.R.V.I.S. Edition</title>
+  
+  <!-- PWA & Mobile Meta Tags (0% background drain, Warm Daylight Alabaster) -->
+  <meta name="theme-color" content="#FAF8F5">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Habit Ledger">
+  
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  
+  <!-- Google Fonts: Inter, Playfair Display, JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,600&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<div class="page">
+  <!-- Ambient Sunlight Horizon Glow -->
+  <div class="sunlight-horizon" aria-hidden="true"></div>
 
-  <header class="cover">
-    <div class="cover-top">
-      <span class="eyebrow">Kept by</span>
-      <span class="owner" id="ownerLabel">you</span>
-    </div>
-    <h1 class="title">The Ledger</h1>
-    <p class="today" id="todayLabel">—</p>
-  </header>
+  <div class="app-layout">
 
-  <section class="stamps" id="statsRow" aria-label="Overview">
-    <div class="stamp">
-      <span class="stamp-num" id="statActive">0</span>
-      <span class="stamp-label">kept today</span>
-    </div>
-    <div class="stamp">
-      <span class="stamp-num" id="statBest">0</span>
-      <span class="stamp-label">best streak</span>
-    </div>
-    <div class="stamp">
-      <span class="stamp-num" id="statTotal">0</span>
-      <span class="stamp-label">habits</span>
-    </div>
-  </section>
+    <!-- ==================== MAIN WORKSPACE ==================== -->
+    <main class="workspace-container">
 
-  <section class="ledger" id="ledger" aria-label="Habits">
-    <!-- habit rows injected here -->
-  </section>
+      <!-- Workspace Top Identity Bar -->
+      <header class="workspace-header">
+        <div class="header-top">
+          <div class="identity-badge" id="profileBadge" role="button" tabindex="0" title="Edit Identity & Goal Profile">
+            <span class="avatar-chip" id="avatarInitial">F</span>
+            <div class="identity-text">
+              <span class="user-greeting" id="userGreeting">Workspace of</span>
+              <strong class="user-name" id="userNameLabel">Fahad</strong>
+            </div>
+            <span class="edit-pill">⚙ Edit Profile</span>
+          </div>
 
-  <p class="empty" id="emptyState" hidden>
-    Blank page. Add the first habit you want to keep below.
-  </p>
+          <div class="header-clock">
+            <div class="live-time" id="liveClock">--:--</div>
+            <div class="live-date" id="liveDate">------</div>
+          </div>
+        </div>
 
-  <form class="add-row" id="addForm">
-    <input type="text" id="habitInput" placeholder="Add a habit, e.g. Read 10 pages" maxlength="60" autocomplete="off" required>
-    <button type="submit" aria-label="Add habit">Add</button>
-  </form>
+        <div class="goal-strip">
+          <span class="goal-tag">☀️ PRIMARY MISSION</span>
+          <span class="goal-text" id="primaryGoalText">Consistent Software Engineering & Daily Fitness</span>
+        </div>
 
-  <footer class="foot">
-    <button class="ghost-btn" id="whoBtn">Whose phone is this?</button>
-    <span class="foot-note">Stored only on this device.</span>
-  </footer>
+        <!-- Real-Time Daily Progress Bar -->
+        <div class="progress-section">
+          <div class="progress-labels">
+            <span class="progress-title">DAILY COMPLETION RHYTHM</span>
+            <span class="progress-percent" id="dailyProgressPercent">0%</span>
+          </div>
+          <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" id="progressTrack">
+            <div class="progress-fill" id="dailyProgressFill" style="width: 0%"></div>
+          </div>
+          <div class="progress-breakdown" id="progressBreakdown">
+            0 of 0 habits & tasks completed today
+          </div>
+        </div>
+      </header>
 
-</div>
+      <!-- ==================== MACRISH COGNITIVE SOLAR HERO SECTION ==================== -->
+      <section class="macrish-hero-section" id="macrishCoreHero">
+        <div class="hero-top-row">
+          <div class="hero-core-visual" id="heroSunTrigger" role="button" tabindex="0" title="Click to open Macrish Core">
+            <div class="hero-sun-sphere" id="heroSunSphere">
+              <div class="hero-sun-heart"></div>
+              <div class="hero-sun-corona"></div>
+            </div>
+          </div>
+          <div class="hero-identity-block">
+            <div class="hero-title-row">
+              <h2 class="hero-entity-title">MACRISH COGNITIVE SOLAR CORE</h2>
+              <span class="hero-pulse-dot" title="Core Online"></span>
+              <span class="hero-chip-zero">0.00% Zero-Drain</span>
+            </div>
+            <p class="hero-entity-sub">Cognitive AI Routine Architect & Neural Assistant calibrated to your rhythm.</p>
+          </div>
+          <div class="hero-quick-actions">
+            <button class="hero-action-btn primary" id="heroTalkBtn" type="button">💬 Speak with Macrish</button>
+            <button class="hero-action-btn" id="heroAlarmBtn" type="button">⏰ Wake-Up Alarm</button>
+          </div>
+        </div>
 
-<div class="modal" id="whoModal" hidden>
-  <div class="modal-card">
-    <h2>Whose ledger is this?</h2>
-    <p>This name only shows on this phone's copy — it doesn't sync anywhere.</p>
-    <input type="text" id="whoInput" placeholder="e.g. Baba, Amma, or your name" maxlength="30">
-    <div class="modal-actions">
-      <button class="ghost-btn" id="whoCancel">Cancel</button>
-      <button class="primary-btn" id="whoSave">Save</button>
+        <!-- Spacious Highlighted Telemetry Badges -->
+        <div class="hero-telemetry-grid">
+          <div class="telemetry-card">
+            <span class="telemetry-label">ACTIVE ALARM</span>
+            <span class="telemetry-value" id="activeAlarmPill">⏰ 05:00 AM</span>
+          </div>
+          <div class="telemetry-card">
+            <span class="telemetry-label">MEMORY VAULT</span>
+            <span class="telemetry-value" id="vaultCountPill">🏛️ 0 Insights</span>
+          </div>
+          <div class="telemetry-card">
+            <span class="telemetry-label">HARDWARE STATUS</span>
+            <span class="telemetry-value" style="color:var(--emerald-confirm);">⚡ 0% Battery Drain</span>
+          </div>
+          <div class="telemetry-card">
+            <span class="telemetry-label">CORE FREQUENCY</span>
+            <span class="telemetry-value" style="color:var(--sun-amber);">SYS: OPTIMAL</span>
+          </div>
+        </div>
+
+        <!-- Prominent Highlighted Cognitive Recommendation Box -->
+        <div class="hero-suggestion-box">
+          <div class="suggestion-accent-strip"></div>
+          <div class="suggestion-content">
+            <div class="suggestion-header">
+              <span class="suggestion-badge">AI COGNITIVE ADVICE</span>
+              <span class="suggestion-sub">Real-Time Rhythm Analysis</span>
+            </div>
+            <p class="suggestion-text" id="botSuggestionText">
+              Warm Daylight systems nominal. Click 'Speak with Macrish' or talk anytime to configure alarms and routines.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Navigation Toolbar -->
+      <nav class="action-toolbar">
+        <div class="toolbar-left">
+          <button class="tool-btn active" id="tabScheduleBtn" type="button">⏱ Timetable</button>
+          <button class="tool-btn" id="tabHabitsBtn" type="button">📖 Habits Ledger</button>
+          <button class="tool-btn" id="tabRecapBtn" type="button">📊 Milestones & Horizon</button>
+          <button class="tool-btn" id="tabVaultBtn" type="button">🏛️ Memory Vault</button>
+        </div>
+        <div class="toolbar-right">
+          <button class="hud-alarm-trigger-btn" id="toolbarAlarmBtn" type="button" title="Set Alarm or Wake-up Music">
+            ⏰ Smart Alarm
+          </button>
+        </div>
+      </nav>
+
+      <!-- ==================== VIEW 1: TIME-BLOCKED SCHEDULE ==================== -->
+      <section class="view-panel" id="scheduleView">
+        <div class="section-lead">
+          <div>
+            <h2 class="section-title">Daily Action Blocks</h2>
+            <p class="section-desc">Organize time slots with automated completion check-ins.</p>
+          </div>
+          <span class="slot-count-badge" id="scheduleCountBadge">0 Blocks</span>
+        </div>
+
+        <div class="timeline-list" id="scheduleList">
+          <!-- Injected via JS -->
+        </div>
+
+        <div class="empty-state" id="scheduleEmpty" hidden>
+          <div class="empty-icon">☀️</div>
+          <p>No action blocks scheduled for today yet. Add your first time slot below or tell Macrish to organize your routine.</p>
+        </div>
+
+        <!-- Add Schedule Form -->
+        <form class="add-block-form" id="addScheduleForm">
+          <div class="time-inputs">
+            <input type="time" id="taskStartTime" required title="Start Time" aria-label="Start Time">
+            <span class="time-sep">to</span>
+            <input type="time" id="taskEndTime" required title="End Time" aria-label="End Time">
+          </div>
+          <input type="text" id="taskTitleInput" placeholder="e.g. System Architecture & High-Performance Coding" maxlength="80" autocomplete="off" required>
+          <button type="submit" class="primary-action-btn">Block Time</button>
+        </form>
+      </section>
+
+      <!-- ==================== VIEW 2: RECURRING HABITS LEDGER ==================== -->
+      <section class="view-panel" id="habitsView" hidden>
+        <div class="section-lead">
+          <div>
+            <h2 class="section-title">Habits Ledger</h2>
+            <p class="section-desc">Permanent paper-ink records. Tap the 7-day dots to backfill anytime.</p>
+          </div>
+          <div class="stat-badges">
+            <span class="stat-pill"><strong id="statActive">0</strong> kept today</span>
+            <span class="stat-pill"><strong id="statBest">0</strong> best streak</span>
+          </div>
+        </div>
+
+        <div class="ledger-list" id="ledgerList">
+          <!-- Injected via JS -->
+        </div>
+
+        <div class="empty-state" id="habitsEmpty" hidden>
+          <div class="empty-icon">📝</div>
+          <p>The habit ledger is clean. Add your core daily habits below or speak with Macrish to track them.</p>
+        </div>
+
+        <!-- Add Habit Form -->
+        <form class="add-block-form" id="addHabitForm">
+          <input type="text" id="habitInput" placeholder="Add daily habit, e.g. Read 20 pages" maxlength="60" autocomplete="off" required>
+          <button type="submit" class="primary-action-btn">Add to Ledger</button>
+        </form>
+      </section>
+
+      <!-- ==================== VIEW 3: 4-STAGE MILESTONE RECAP ENGINE ==================== -->
+      <section class="view-panel" id="recapView" hidden>
+        <div class="section-lead">
+          <div>
+            <h2 class="section-title">Milestone & Horizon Analytics</h2>
+            <p class="section-desc">Longitudinal consistency evaluated across 7, 15, 21, and 30-day horizons.</p>
+          </div>
+          <button class="hud-outline-btn" id="open30DayAuditBtn" type="button" title="Launch 30-Day Memory Audit">
+            🧹 30-Day Memory Audit
+          </button>
+        </div>
+
+        <div class="milestone-tabs">
+          <button class="stage-tab active" data-stage="7" type="button">7-Day Sprint</button>
+          <button class="stage-tab" data-stage="15" type="button">15-Day Audit</button>
+          <button class="stage-tab" data-stage="21" type="button">21-Day Formation</button>
+          <button class="stage-tab" data-stage="30" type="button">30-Day Master Ledger</button>
+        </div>
+
+        <div class="milestone-card" id="milestoneCard">
+          <!-- Dynamically filled via JS -->
+        </div>
+      </section>
+
+      <!-- ==================== VIEW 4: MACRISH COGNITIVE VAULT ==================== -->
+      <section class="view-panel" id="vaultView" hidden>
+        <div class="section-lead">
+          <div>
+            <h2 class="section-title">Macrish Cognitive Memory Vault</h2>
+            <p class="section-desc">Autonomous AI scan of important life decisions, key goals, and milestones from daily chats.</p>
+          </div>
+          <div class="vault-header-actions">
+            <button class="ghost-btn" id="exportVaultFileBtn" type="button">💾 Export Vault (.md)</button>
+            <button class="ghost-btn" id="addVaultManualBtn" type="button">+ Add Note</button>
+          </div>
+        </div>
+
+        <div class="vault-items-list" id="vaultList">
+          <!-- Injected via JS -->
+        </div>
+
+        <div class="empty-state" id="vaultEmpty" hidden>
+          <div class="empty-icon">🏛️</div>
+          <p>No memories logged yet. As you talk with Macrish about goals, decisions, or milestones, the AI Importance Scanner automatically preserves them here.</p>
+        </div>
+      </section>
+
+      <!-- Workspace Footer -->
+      <footer class="app-footer">
+        <div class="footer-actions">
+          <button class="ghost-btn" id="exportDataBtn" type="button">💾 Export Full Backup</button>
+          <label class="ghost-btn file-label" for="importFileInput">
+            📥 Import Backup
+            <input type="file" id="importFileInput" accept=".json" style="display: none;">
+          </label>
+          <button class="ghost-btn" id="clearDataPromptBtn" type="button">🧹 Reset Workspace</button>
+        </div>
+        <p class="footer-note">
+          Habit Ledger v5.0 • Warm Daylight Architecture • 0% Background Resource Drain • Local-First Privacy.
+        </p>
+      </footer>
+
+    </main>
+  </div>
+
+  <!-- ==================== FLOATING SOLAR ORB SUMMONER ==================== -->
+  <aside class="floating-solar-dock" id="floatingSolarDock">
+    <button class="floating-solar-btn" id="floatingArcBtn" type="button" aria-label="Summon Macrish Solar Core">
+      <div class="solar-orb-core">
+        <div class="solar-corona-ring ring-1"></div>
+        <div class="solar-corona-ring ring-2"></div>
+        <div class="solar-sun-heart"></div>
+        <div class="solar-flare-dot"></div>
+      </div>
+      <span class="dock-tooltip">MACRISH SUN-CORE</span>
+    </button>
+  </aside>
+
+  <!-- ==================== MACRISH SOLAR SUN-CORE HUD MODAL ==================== -->
+  <div class="macrish-hud-overlay" id="macrishHudModal" hidden>
+    <div class="hud-window">
+      
+      <!-- Top HUD Telemetry Bar -->
+      <div class="hud-telemetry-bar">
+        <div class="telemetry-left">
+          <span class="hud-dot-sun"></span>
+          <span class="hud-protocol-tag">MACRISH // SOLAR CORE v5.0</span>
+          <span class="hud-status-text">SYS: ACTIVE</span>
+        </div>
+        <div class="telemetry-right">
+          <span class="hud-power-text">DRAIN: 0.00%</span>
+          <button class="hud-close-btn" id="closeHudBtn" type="button" aria-label="Close HUD">&times;</button>
+        </div>
+      </div>
+
+      <!-- Split Layout: Left Sidebar Navigation Dock + Right Viewport -->
+      <div class="hud-body-layout">
+        
+        <!-- SIDE NAVIGATION DOCK (Section Icons on the side) -->
+        <aside class="hud-sidebar" aria-label="Macrish Navigation Dock">
+          
+          <!-- Mini Living Sun-Core in Sidebar -->
+          <div class="hud-sidebar-sun">
+            <div class="sun-orb-stage-wrapper sidebar-orb">
+              <div class="solar-glow-backdrop"></div>
+              <div class="macrish-sun-sphere mini" id="macrishSunSphere">
+                <div class="sun-core-center"></div>
+                <div class="sun-corona-outer"></div>
+              </div>
+            </div>
+            <!-- Reactive Equalizer Wave Bars -->
+            <div class="audio-equalizer mini" id="hudEqualizer">
+              <span class="eq-bar"></span>
+              <span class="eq-bar"></span>
+              <span class="eq-bar"></span>
+              <span class="eq-bar"></span>
+              <span class="eq-bar"></span>
+            </div>
+            <span class="sidebar-core-tag">SOLAR CORE</span>
+          </div>
+
+          <div class="hud-sidebar-divider"></div>
+
+          <!-- Section Icon Buttons -->
+          <nav class="hud-sidebar-nav">
+            <button class="hud-tab-btn active" id="hudTabChatBtn" type="button" title="Conversational AI">
+              <span class="hud-tab-icon">💬</span>
+              <span class="hud-tab-text">Chat</span>
+            </button>
+            <button class="hud-tab-btn" id="hudTabAlarmBtn" type="button" title="Smart Alarm & Nightstand">
+              <span class="hud-tab-icon">⏰</span>
+              <span class="hud-tab-text">Alarms</span>
+            </button>
+            <button class="hud-tab-btn" id="hudTabVaultBtn" type="button" title="Memory Vault & AI Insights">
+              <span class="hud-tab-icon">🏛️</span>
+              <span class="hud-tab-text">Vault</span>
+            </button>
+            <button class="hud-tab-btn" id="hudTabApiBtn" type="button" title="Gemini Flash Intelligence">
+              <span class="hud-tab-icon">🔑</span>
+              <span class="hud-tab-text">AI Key</span>
+            </button>
+          </nav>
+        </aside>
+
+        <!-- RIGHT VIEWPORT: ACTIVE SECTION APPEARS HERE ON TAP -->
+        <div class="hud-viewport">
+          
+          <!-- Viewport Header Greeting -->
+          <div class="hud-viewport-header">
+            <div class="hud-sub-title" id="hudSubTitle">"Good day, Fahad sir. The solar core is calibrated to your rhythm."</div>
+          </div>
+
+          <!-- PANEL 1: CONVERSATIONAL STREAM -->
+          <div class="hud-panel" id="hudPanelChat">
+        <div class="hud-chat-history" id="hudChatHistory">
+          <!-- Chat messages stream here -->
+        </div>
+
+        <!-- Quick Bangla/English Prompt Suggestion Chips -->
+        <div class="hud-prompt-chips">
+          <button class="prompt-chip" data-prompt="আমাকে সকাল ৫টা বাজে উঠায় দিবা" type="button">⏰ সকাল ৫টায় অ্যালার্ম</button>
+          <button class="prompt-chip" data-prompt="আজকের শিডিউল তৈরি করো" type="button">📋 শিডিউল প্ল্যান</button>
+          <button class="prompt-chip" data-prompt="আমি সিদ্ধান্ত নিয়েছি যে প্রতিদিন ভোরে ব্যায়াম করব" type="button">💡 সিদ্ধান্ত ভল্টে সেভ</button>
+          <button class="prompt-chip" data-prompt="Add habit Read 20 pages" type="button">📖 নতুন অভ্যাস</button>
+        </div>
+
+        <form class="hud-chat-form" id="hudChatForm">
+          <input type="text" id="hudChatInput" placeholder="Talk or type in Bangla or English... (e.g. 'আমাকে সকাল ৫টা বাজে উঠায় দিবা')" autocomplete="off" required>
+          <button type="submit" class="hud-send-btn">Transmit</button>
+        </form>
+      </div>
+
+      <!-- PANEL 2: SMART ALARM & NIGHTSTAND CONTROLS -->
+      <div class="hud-panel" id="hudPanelAlarm" hidden>
+        <div class="alarm-controls-grid">
+          
+          <div class="alarm-card-section">
+            <h4 class="hud-section-header">Active Wake-up Alarms</h4>
+            <div class="alarm-list-container" id="alarmListContainer">
+              <!-- Injected via JS -->
+            </div>
+            
+            <form class="quick-alarm-form" id="quickAlarmForm">
+              <input type="time" id="alarmTimeInput" value="05:00" required>
+              <input type="text" id="alarmLabelInput" placeholder="Label (e.g. Morning Prayer & Workout)" maxlength="40">
+              <button type="submit" class="hud-outline-btn">+ Set Alarm</button>
+            </form>
+          </div>
+
+          <div class="alarm-card-section">
+            <h4 class="hud-section-header">Alarm Music & Chime</h4>
+            <p class="hud-card-desc">Custom MP3 / WAV stored permanently in local IndexedDB + high-fidelity synthesizer fallback.</p>
+            
+            <div class="audio-picker-wrap">
+              <label class="hud-outline-btn file-pick-label" for="customAudioFile">
+                🎵 Select Alarm Song (.mp3 / .wav)
+                <input type="file" id="customAudioFile" accept="audio/*" style="display:none;">
+              </label>
+              <div class="audio-status-pill" id="audioStatusPill">Default Morning Synthesizer</div>
+            </div>
+
+            <div class="audio-test-row">
+              <button class="ghost-btn" id="testSoundBtn" type="button">▶ Test Alarm Sound</button>
+              <button class="ghost-btn" id="stopSoundBtn" type="button" hidden>⏹ Stop Sound</button>
+            </div>
+
+            <div class="nightstand-toggle-row">
+              <label class="toggle-switch-label">
+                <input type="checkbox" id="wakeLockCheckbox">
+                <span class="toggle-slider"></span>
+                <span class="toggle-text">Nightstand Mode (Keep Screen Awake while Charging)</span>
+              </label>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- PANEL 3: MEMORY VAULT QUICK ACCESS -->
+      <div class="hud-panel" id="hudPanelVault" hidden>
+        <div class="vault-hud-lead">
+          <p class="hud-card-desc">The AI Importance Scanner automatically extracts life goals, core decisions, and milestones from your conversation.</p>
+        </div>
+        <div class="hud-vault-list" id="hudVaultList">
+          <!-- Injected via JS -->
+        </div>
+      </div>
+
+      <!-- PANEL 4: GEMINI FLASH API KEY SETTING -->
+      <div class="hud-panel" id="hudPanelApi" hidden>
+        <div class="api-settings-card">
+          <h4 class="hud-section-header">Client-Side Gemini API Key (Optional)</h4>
+          <p class="hud-card-desc">Macrish works 100% offline with its built-in rule engine. If you want full Gemini Flash AI intelligence, enter your Google Gemini API key below. Stored strictly in your browser's local memory.</p>
+          <div class="api-input-wrap">
+            <input type="password" id="geminiApiKeyInput" placeholder="AIzaSy..." autocomplete="off">
+            <button class="primary-action-btn" id="saveApiKeyBtn" type="button">Save Key</button>
+          </div>
+          <span class="api-status-tag" id="apiKeyStatus">Status: Using Built-in Offline Neural Engine</span>
+        </div>
+      </div>
+
+        </div><!-- /.hud-viewport -->
+      </div><!-- /.hud-body-layout -->
+
     </div>
   </div>
-</div>
 
-<script src="app.js"></script>
+  <!-- ==================== FULL-SCREEN SOLAR WAKE-UP ALARM OVERLAY ==================== -->
+  <div class="macrish-alarm-overlay" id="macrishAlarmOverlay" hidden>
+    <div class="alarm-sun-stage">
+      <div class="alarm-sun-core-pulse"></div>
+      <div class="alarm-corona-flare"></div>
+    </div>
+
+    <div class="alarm-content-box">
+      <div class="alarm-hud-pill">☀️ MACRISH WAKE-UP PROTOCOL</div>
+      <h1 class="alarm-time-display" id="alarmTriggerTimeDisplay">05:00 AM</h1>
+      <h2 class="alarm-greeting-text" id="alarmGreetingText">
+        শুভ সকাল ফাহাদ! ওঠার সময় হয়েছে!
+      </h2>
+      <p class="alarm-label-display" id="alarmTriggerLabelDisplay">Rise and conquer your daily mission.</p>
+
+      <div class="alarm-actions-row">
+        <button class="alarm-stop-btn" id="alarmStopBtn" type="button">Stop Alarm & Start Day 🌅</button>
+        <button class="alarm-snooze-btn" id="alarmSnoozeBtn" type="button">Snooze (10m) 💤</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 30-DAY MEMORY AUDIT "KEEP VS. DELETE" MODAL ==================== -->
+  <div class="modal-backdrop" id="memoryAuditModal" hidden>
+    <div class="modal-card audit-modal-card">
+      <div class="modal-header">
+        <div class="bot-badge">🧹 30-Day Memory Audit</div>
+        <button class="modal-close-btn" id="closeAuditModal" type="button">&times;</button>
+      </div>
+      <h2 class="modal-title">Keep vs. Delete Lifecycle</h2>
+      <p class="modal-desc">
+        Review notes extracted by the AI Importance Scanner over the last 30 days. Choose what to keep permanently in your vault and what to delete to protect device storage and privacy.
+      </p>
+
+      <div class="audit-bulk-actions">
+        <button class="ghost-btn" id="auditKeepAllBtn" type="button">📌 Keep All Valid</button>
+        <button class="ghost-btn" id="auditDeleteAllBtn" type="button">🗑️ Purge All</button>
+      </div>
+
+      <div class="audit-items-container" id="auditItemsContainer">
+        <!-- Injected via JS -->
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="primary-action-btn" id="finishAuditBtn">Save & Conclude Audit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Profile & Goal Modal -->
+  <div class="modal-backdrop" id="identityModal" hidden>
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2 class="modal-title">Identity & Mission Portal</h2>
+        <button class="modal-close-btn" id="closeIdentityModal" type="button">&times;</button>
+      </div>
+      <p class="modal-desc">Configure your personal profile. Stored safely in local storage.</p>
+      
+      <form id="identityForm">
+        <div class="form-group">
+          <label for="inputUserName">Your Name</label>
+          <input type="text" id="inputUserName" placeholder="Fahad" required maxlength="32">
+        </div>
+
+        <div class="form-group">
+          <label for="inputPrimaryGoal">Primary Mission / Goal</label>
+          <input type="text" id="inputPrimaryGoal" placeholder="Consistent Software Engineering & Daily Fitness" required maxlength="100">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="inputWakeTime">Target Wake Time</label>
+            <input type="time" id="inputWakeTime" value="05:00" required>
+          </div>
+          <div class="form-group">
+            <label for="inputReviewTime">Evening Review Time</label>
+            <input type="time" id="inputReviewTime" value="22:00" required>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="ghost-btn" id="cancelIdentityBtn">Cancel</button>
+          <button type="submit" class="primary-action-btn">Save Profile</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Manual Add Vault Note Modal -->
+  <div class="modal-backdrop" id="manualVaultModal" hidden>
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2 class="modal-title">Add Note to Macrish Vault</h2>
+        <button class="modal-close-btn" id="closeManualVaultModal" type="button">&times;</button>
+      </div>
+      <form id="manualVaultForm">
+        <div class="form-group">
+          <label for="vaultCategoryInput">Category</label>
+          <select id="vaultCategoryInput">
+            <option value="Decision">Decision (সিদ্ধান্ত)</option>
+            <option value="Goal">Goal (লক্ষ্য)</option>
+            <option value="Insight">Insight (উপলব্ধি)</option>
+            <option value="Milestone">Milestone (মাইলফলক)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="vaultSummaryInput">Summary / Note</label>
+          <textarea id="vaultSummaryInput" rows="3" placeholder="Write your key insight or decision..." required></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="ghost-btn" id="cancelManualVaultBtn">Cancel</button>
+          <button type="submit" class="primary-action-btn">Save to Vault</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
 </body>
 </html>

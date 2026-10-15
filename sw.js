@@ -1,5 +1,5 @@
-// Bumping this version string invalidates the old cache next time you deploy.
-const CACHE_NAME = "ledger-cache-v1";
+// Habit Ledger Service Worker v4 (Cognitive Edition)
+const CACHE_NAME = "ledger-cache-v4";
 const FILES_TO_CACHE = [
   "./",
   "./index.html",
@@ -26,9 +26,34 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-// Cache-first for app files, falls back to network for anything else (like fonts).
+// Stale-while-revalidate for local files, network-fallback with catch for fonts/icons
 self.addEventListener("fetch", (event) => {
+  if (event.request.method !== "GET") return;
   event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request))
+    caches.match(event.request).then((cached) => {
+      const networked = fetch(event.request)
+        .then((response) => {
+          if (response && response.status === 200 && response.type === "basic") {
+            const cacheCopy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cacheCopy));
+          }
+          return response;
+        })
+        .catch(() => cached);
+      return cached || networked;
+    })
+  );
+});
+
+// Notification click handling
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  event.waitUntil(
+    clients.matchAll({ type: "window" }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url && "focus" in client) return client.focus();
+      }
+      if (clients.openWindow) return clients.openWindow("./");
+    })
   );
 });
