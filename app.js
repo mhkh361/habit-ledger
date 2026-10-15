@@ -331,44 +331,87 @@ function parseTimeFromText(text) {
 
 // ---------- Google Gemini Intelligence Client (1.5 & 2.5/2.0) ----------
 function getGeminiApiKey() {
-  return (localStorage.getItem(KEYS.GEMINI_KEY) || "").trim();
+  try {
+    return (localStorage.getItem(KEYS.GEMINI_KEY) || "").trim();
+  } catch (e) {
+    return (window.__mem_gemini_key || "").trim();
+  }
 }
 
 function setGeminiApiKey(key) {
-  if (key) {
-    localStorage.setItem(KEYS.GEMINI_KEY, key.trim());
-  } else {
-    localStorage.removeItem(KEYS.GEMINI_KEY);
+  const clean = (key || "").trim();
+  try {
+    if (clean) {
+      localStorage.setItem(KEYS.GEMINI_KEY, clean);
+    } else {
+      localStorage.removeItem(KEYS.GEMINI_KEY);
+    }
+  } catch (e) {
+    window.__mem_gemini_key = clean;
   }
 }
 
 function getGeminiModel() {
-  return localStorage.getItem(KEYS.GEMINI_MODEL) || "gemini-1.5-flash";
+  try {
+    const val = localStorage.getItem(KEYS.GEMINI_MODEL) || "gemini-1.5-flash";
+    return val.trim().replace(/^models\//, "");
+  } catch (e) {
+    return (window.__mem_gemini_model || "gemini-1.5-flash").replace(/^models\//, "");
+  }
 }
 
 function setGeminiModel(model) {
-  localStorage.setItem(KEYS.GEMINI_MODEL, model || "gemini-1.5-flash");
+  const clean = (model || "gemini-1.5-flash").trim().replace(/^models\//, "");
+  try {
+    localStorage.setItem(KEYS.GEMINI_MODEL, clean);
+  } catch (e) {
+    window.__mem_gemini_model = clean;
+  }
 }
 
-async function verifyGeminiApiKey(apiKey, model) {
-  const cleanKey = apiKey.trim();
-  const targetModel = model || getGeminiModel();
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(cleanKey)}`;
-  const payload = {
-    contents: [{ parts: [{ text: "Hello" }] }],
-    generationConfig: { maxOutputTokens: 5 }
+async function verifyGeminiApiKey(rawApiKey, selectedModel = "gemini-1.5-flash") {
+  // 1. Sanitize key: trim whitespace & newlines from mobile Safari clipboard
+  const cleanKey = (rawApiKey || "").trim();
+  if (!cleanKey) {
+    throw new Error("অনুগ্রহ করে একটি সঠিক API Key প্রদান করুন।");
+  }
+
+  // 2. Standard Verification via Google ListModels Endpoint (Safe, no token burn, no prompt filters)
+  const checkUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(cleanKey)}`;
+  const response = await fetch(checkUrl);
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const rawMsg = data.error?.message || `HTTP ${response.status}`;
+    if (response.status === 400 || rawMsg.includes("API_KEY_INVALID") || rawMsg.includes("API key not valid")) {
+      throw new Error("ভুল API Key! অনুগ্রহ করে Google AI Studio থেকে সঠিক কি কপি করুন।");
+    } else if (response.status === 403) {
+      throw new Error("API Key অ্যাক্সেস পারমিশন রেস্ট্রিক্টেড বা ব্লকড।");
+    }
+    throw new Error(`Google AI Error: ${rawMsg}`);
+  }
+
+  // 3. Normalize Model Name (Strip any duplicate 'models/' prefix)
+  const cleanModelName = (selectedModel || "gemini-1.5-flash").trim().replace(/^models\//, "");
+
+  // 4. Safe storage inside try/catch
+  setGeminiApiKey(cleanKey);
+  setGeminiModel(cleanModelName);
+
+  return {
+    ok: true,
+    chosenModel: cleanModelName,
+    availableModels: data.models || []
   };
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  });
-  return response;
 }
 
 async function queryGeminiFlash(userInput, apiKey) {
-  const cleanKey = apiKey.trim();
-  let targetModel = getGeminiModel();
+  const cleanKey = (apiKey || "").trim();
+  if (!cleanKey) throw new Error("API Key অনুপস্থিত");
+
+  // Normalize model name (guaranteed no duplicate 'models/' prefix)
+  let targetModel = getGeminiModel().trim().replace(/^models\//, "");
+
   const systemPrompt = `You are Macrish v5.0, an intelligent, respectful, and motivating personal AI companion (inspired by Iron Man's J.A.R.V.I.S.) for Fahad sir inside his Habit Ledger app.
 Core Instructions:
 - Keep answers direct, friendly, and actionable (2-4 sentences max unless the user specifically asks for a detailed plan or explanation).
@@ -397,7 +440,7 @@ Core Instructions:
     body: JSON.stringify(payload)
   });
 
-  // Graceful fallback to gemini-1.5-flash if 2.0/2.5 model returns 404
+  // Graceful fallback to gemini-1.5-flash if selected model returns 404
   if (response.status === 404 && targetModel !== "gemini-1.5-flash") {
     console.warn(`${targetModel} not found on endpoint, falling back to gemini-1.5-flash`);
     targetModel = "gemini-1.5-flash";
@@ -1650,34 +1693,28 @@ function setupEvents() {
     saveApiKeyBtn.addEventListener("click", async () => {
       const raw = (apiKeyInput?.value || "").trim();
       if (!raw) {
-        alert("Please paste a valid Gemini API key (starts with AIzaSy...).");
+        alert("অনুগ্রহ করে একটি সঠিক Gemini API Key প্রদান করুন (starts with AIzaSy...).");
         return;
       }
 
       const chosenModel = getGeminiModel();
-      if (apiKeyStatus) apiKeyStatus.textContent = `Status: Verifying key with ${chosenModel}...`;
+      if (apiKeyStatus) apiKeyStatus.textContent = `Status: Verifying key with Google AI...`;
       if (apiKeyStatusDot) apiKeyStatusDot.className = "api-status-indicator verifying";
       saveApiKeyBtn.disabled = true;
 
       try {
         const res = await verifyGeminiApiKey(raw, chosenModel);
         if (res.ok) {
-          setGeminiApiKey(raw);
           updateApiKeyUI();
           triggerHaptic();
-          alert(`Success! ${chosenModel} is now active and verified.`);
-        } else {
-          const errData = await res.json().catch(() => ({}));
-          const errMsg = errData.error?.message || `HTTP ${res.status}`;
-          if (apiKeyStatus) apiKeyStatus.textContent = `Status: Invalid Key (${errMsg})`;
-          if (apiKeyStatusDot) apiKeyStatusDot.className = "api-status-indicator error";
-          alert(`Google AI returned an error: ${errMsg}\nPlease verify that your key is valid for ${chosenModel}.`);
+          alert(`Success! Gemini API Key সফলভাবে ভেরিফাই ও সক্রিয় করা হয়েছে (${res.chosenModel})।`);
         }
       } catch (err) {
-        setGeminiApiKey(raw);
-        updateApiKeyUI();
-        if (apiKeyStatus) apiKeyStatus.textContent = "Status: Key saved locally (Network offline, will use when connected)";
-        alert("Key saved locally. Note: Could not reach Google AI directly (check your internet connection).");
+        console.warn("API Verification failed:", err);
+        const errMsg = err.message || "ভেরিফিকেশন ব্যর্থ হয়েছে। আপনার কী পরীক্ষা করুন।";
+        if (apiKeyStatus) apiKeyStatus.textContent = `Status: ${errMsg}`;
+        if (apiKeyStatusDot) apiKeyStatusDot.className = "api-status-indicator error";
+        alert(errMsg);
       } finally {
         saveApiKeyBtn.disabled = false;
       }

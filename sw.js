@@ -1,12 +1,12 @@
-// Habit Ledger Service Worker v8 (Cognitive & Live Talk Edition)
-const CACHE_NAME = "ledger-cache-v8";
+// Habit Ledger Service Worker v9 (Gemini API ListModels Fix)
+const CACHE_NAME = "ledger-cache-v9";
 const FILES_TO_CACHE = [
   "./",
   "./index.html",
   "./style.css",
-  "./style.css?v=8",
+  "./style.css?v=9",
   "./app.js",
-  "./app.js?v=8",
+  "./app.js?v=9",
   "./manifest.json",
   "./icon-192.png",
   "./icon-512.png"
