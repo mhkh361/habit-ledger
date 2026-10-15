@@ -1,0 +1,127 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 280" width="100%" height="100%" style="border-radius: 16px; background: linear-gradient(135deg, #FAF8F5 0%, #F5EFE6 50%, #ECE3D4 100%); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="borderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F59E0B" stop-opacity="0.8"/>
+      <stop offset="50%" stop-color="#EA580C" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#D97706" stop-opacity="0.8"/>
+    </linearGradient>
+
+    <radialGradient id="sunSphereGrad" cx="35%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="25%" stop-color="#FEF08A"/>
+      <stop offset="65%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#EA580C"/>
+    </radialGradient>
+
+    <radialGradient id="coronaGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#F59E0B" stop-opacity="0.6"/>
+      <stop offset="50%" stop-color="#F59E0B" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#F59E0B" stop-opacity="0"/>
+    </radialGradient>
+
+    <filter id="glowFilter" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="12" flood-color="#B4A082" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <style>
+    @keyframes pulseCore {
+      0%, 100% { transform: scale(1); filter: drop-shadow(0 0 14px rgba(245, 158, 11, 0.5)); }
+      50% { transform: scale(1.08); filter: drop-shadow(0 0 26px rgba(234, 88, 12, 0.85)); }
+    }
+    @keyframes breatheCorona {
+      0%, 100% { transform: scale(1); opacity: 0.5; }
+      50% { transform: scale(1.22); opacity: 0.9; }
+    }
+    @keyframes eqBar1 { 0%, 100% { height: 6px; y: 220px; } 50% { height: 22px; y: 204px; } }
+    @keyframes eqBar2 { 0%, 100% { height: 18px; y: 208px; } 50% { height: 8px; y: 218px; } }
+    @keyframes eqBar3 { 0%, 100% { height: 10px; y: 216px; } 50% { height: 26px; y: 200px; } }
+    @keyframes eqBar4 { 0%, 100% { height: 24px; y: 202px; } 50% { height: 12px; y: 214px; } }
+    @keyframes eqBar5 { 0%, 100% { height: 8px; y: 218px; } 50% { height: 20px; y: 206px; } }
+    @keyframes blinkDot { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+    
+    .sun-group { transform-origin: 120px 120px; animation: pulseCore 3s ease-in-out infinite; }
+    .corona-ring { transform-origin: 120px 120px; animation: breatheCorona 3s ease-in-out infinite; }
+    .eq-1 { animation: eqBar1 1.1s ease-in-out infinite; }
+    .eq-2 { animation: eqBar2 0.9s ease-in-out infinite; }
+    .eq-3 { animation: eqBar3 1.3s ease-in-out infinite; }
+    .eq-4 { animation: eqBar4 0.8s ease-in-out infinite; }
+    .eq-5 { animation: eqBar5 1.2s ease-in-out infinite; }
+    .status-blink { animation: blinkDot 1.8s ease-in-out infinite; }
+  </style>
+
+  <!-- Outer Card Frame -->
+  <rect x="2" y="2" width="916" height="276" rx="14" fill="none" stroke="url(#borderGrad)" stroke-width="2.5"/>
+
+  <!-- Left: Animated Living Sun Core (J.A.R.V.I.S. Entity) -->
+  <g class="corona-ring">
+    <circle cx="120" cy="120" r="75" fill="url(#coronaGlow)"/>
+  </g>
+
+  <g class="sun-group" filter="url(#glowFilter)">
+    <circle cx="120" cy="120" r="48" fill="url(#sunSphereGrad)"/>
+    <circle cx="120" cy="120" r="16" fill="#FFFFFF" opacity="0.95"/>
+  </g>
+
+  <!-- Audio Equalizer underneath Sun Core -->
+  <g fill="#D97706" rx="2">
+    <rect class="eq-1" x="96" y="212" width="4" height="14" rx="2"/>
+    <rect class="eq-2" x="108" y="210" width="4" height="18" rx="2"/>
+    <rect class="eq-3" x="120" y="206" width="4" height="24" rx="2"/>
+    <rect class="eq-4" x="132" y="208" width="4" height="20" rx="2"/>
+    <rect class="eq-5" x="144" y="214" width="4" height="12" rx="2"/>
+  </g>
+  <text x="120" y="246" text-anchor="middle" font-size="10" font-weight="700" fill="#92400E" letter-spacing="1.5">SOLAR CORE v5.0</text>
+
+  <!-- Right: Header & Telemetry -->
+  <!-- Status Chip -->
+  <rect x="230" y="38" width="220" height="26" rx="13" fill="#FFFFFF" stroke="#E6DFCE" stroke-width="1"/>
+  <circle class="status-blink" cx="245" cy="51" r="4.5" fill="#10B981"/>
+  <text x="258" y="55" font-size="11" font-weight="800" fill="#1D212A" letter-spacing="0.5">MACRISH // SYS: ONLINE</text>
+  <text x="390" y="55" font-size="10.5" font-weight="700" fill="#10B981">DRAIN: 0.00%</text>
+
+  <!-- Title -->
+  <text x="230" y="102" font-family="'Playfair Display', Georgia, serif" font-size="34" font-weight="800" fill="#1D212A" letter-spacing="-0.5">The Habit Ledger</text>
+  <text x="230" y="128" font-size="15" font-weight="600" fill="#786B58">Warm Daylight Architecture • J.A.R.V.I.S. Cognitive Companion</text>
+
+  <!-- Feature Telemetry Badges -->
+  <!-- Badge 1: 0% Battery Drain -->
+  <g transform="translate(230, 150)">
+    <rect width="148" height="32" rx="8" fill="#FFFFFF" stroke="#D1FAE5" stroke-width="1.2" filter="url(#softShadow)"/>
+    <text x="12" y="20" font-size="12" font-weight="700" fill="#065F46">⚡ 0% Battery Drain</text>
+  </g>
+
+  <!-- Badge 2: Bangla NLP Alarm -->
+  <g transform="translate(390, 150)">
+    <rect width="168" height="32" rx="8" fill="#FFFFFF" stroke="#FEF3C7" stroke-width="1.2" filter="url(#softShadow)"/>
+    <text x="12" y="20" font-size="12" font-weight="700" fill="#92400E">⏰ Conversational Alarm</text>
+  </g>
+
+  <!-- Badge 3: AI Memory Vault -->
+  <g transform="translate(570, 150)">
+    <rect width="148" height="32" rx="8" fill="#FFFFFF" stroke="#E0E7FF" stroke-width="1.2" filter="url(#softShadow)"/>
+    <text x="12" y="20" font-size="12" font-weight="700" fill="#3730A3">🏛️ AI Memory Vault</text>
+  </g>
+
+  <!-- Badge 4: 100% Offline PWA -->
+  <g transform="translate(730, 150)">
+    <rect width="145" height="32" rx="8" fill="#FFFFFF" stroke="#FDE68A" stroke-width="1.2" filter="url(#softShadow)"/>
+    <text x="12" y="20" font-size="12" font-weight="700" fill="#B45309">☀️ 100% Offline PWA</text>
+  </g>
+
+  <!-- Bottom Quote / Slogan -->
+  <text x="230" y="222" font-family="'Playfair Display', Georgia, serif" font-style="italic" font-size="14.5" fill="#5F6878">
+    "Good day, Fahad sir. The solar core is calibrated to your rhythm."
+  </text>
+  
+  <rect x="230" y="240" width="645" height="1" fill="#E6DFCE"/>
+  <text x="230" y="258" font-size="11" font-weight="600" fill="#949DAE">
+    Bangla &amp; English NLP • IndexedDB Custom MP3 Audio • 30-Day Memory Audit • Local-First Privacy
+  </text>
+</svg>
