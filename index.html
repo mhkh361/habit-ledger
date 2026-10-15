@@ -355,25 +355,54 @@
             <div class="hud-sub-title" id="hudSubTitle">"Good day, Fahad sir. The solar core is calibrated to your rhythm."</div>
           </div>
 
-          <!-- PANEL 1: CONVERSATIONAL STREAM -->
+          <!-- PANEL 1: CONVERSATIONAL STREAM & LIVE TALK -->
           <div class="hud-panel" id="hudPanelChat">
-        <div class="hud-chat-history" id="hudChatHistory">
-          <!-- Chat messages stream here -->
-        </div>
+            
+            <!-- Live Talk & Voice Controls Bar -->
+            <div class="live-talk-controls-bar">
+              <div class="live-talk-left">
+                <button type="button" class="live-talk-toggle-btn" id="liveTalkMasterBtn" title="Start real-time voice call with Macrish">
+                  <span class="live-talk-dot"></span>
+                  <span class="live-talk-btn-text">🎙️ Start Live Talk</span>
+                </button>
+                <select id="voiceLanguageSelect" class="voice-lang-select" title="Voice Recognition Language">
+                  <option value="bn-BD">🇧🇩 বাংলা (Bangla)</option>
+                  <option value="en-US">🇬🇧 English (US)</option>
+                </select>
+              </div>
+              <div class="live-talk-right">
+                <label class="voice-speakback-toggle" title="Have Macrish speak replies aloud">
+                  <input type="checkbox" id="voiceSpeakbackCheckbox" checked>
+                  <span class="voice-speakback-text">🔊 Speak Aloud</span>
+                </label>
+                <button type="button" class="ghost-btn stop-speaking-btn" id="stopVoiceSpeechBtn" style="display:none;" title="Stop Macrish Voice">⏹ Stop</button>
+              </div>
+            </div>
 
-        <!-- Quick Bangla/English Prompt Suggestion Chips -->
-        <div class="hud-prompt-chips">
-          <button class="prompt-chip" data-prompt="আমাকে সকাল ৫টা বাজে উঠায় দিবা" type="button">⏰ সকাল ৫টায় অ্যালার্ম</button>
-          <button class="prompt-chip" data-prompt="আজকের শিডিউল তৈরি করো" type="button">📋 শিডিউল প্ল্যান</button>
-          <button class="prompt-chip" data-prompt="আমি সিদ্ধান্ত নিয়েছি যে প্রতিদিন ভোরে ব্যায়াম করব" type="button">💡 সিদ্ধান্ত ভল্টে সেভ</button>
-          <button class="prompt-chip" data-prompt="Add habit Read 20 pages" type="button">📖 নতুন অভ্যাস</button>
-        </div>
+            <!-- Live Listening Indicator Banner -->
+            <div class="live-listening-badge" id="liveListeningBadge" style="display:none;">
+              <span class="listening-wave-dot"></span>
+              <span>🎙️ Listening to you... Speak in বাংলা or English</span>
+            </div>
 
-        <form class="hud-chat-form" id="hudChatForm">
-          <input type="text" id="hudChatInput" placeholder="Talk or type in Bangla or English... (e.g. 'আমাকে সকাল ৫টা বাজে উঠায় দিবা')" autocomplete="off" required>
-          <button type="submit" class="hud-send-btn">Transmit</button>
-        </form>
-      </div>
+            <div class="hud-chat-history" id="hudChatHistory">
+              <!-- Chat messages stream here -->
+            </div>
+
+            <!-- Quick Bangla/English Prompt Suggestion Chips -->
+            <div class="hud-prompt-chips">
+              <button class="prompt-chip" data-prompt="আমাকে সকাল ৫টা বাজে উঠায় দিবা" type="button">⏰ সকাল ৫টায় অ্যালার্ম</button>
+              <button class="prompt-chip" data-prompt="আজকের শিডিউল তৈরি করো" type="button">📋 শিডিউল প্ল্যান</button>
+              <button class="prompt-chip" data-prompt="আমি সিদ্ধান্ত নিয়েছি যে প্রতিদিন ভোরে ব্যায়াম করব" type="button">💡 সিদ্ধান্ত ভল্টে সেভ</button>
+              <button class="prompt-chip" data-prompt="Add habit Read 20 pages" type="button">📖 নতুন অভ্যাস</button>
+            </div>
+
+            <form class="hud-chat-form" id="hudChatForm">
+              <input type="text" id="hudChatInput" placeholder="Talk or type in Bangla or English... (e.g. 'আমাকে সকাল ৫টা বাজে উঠায় দিবা')" autocomplete="off" required>
+              <button type="button" class="hud-mic-btn" id="hudVoiceMicBtn" title="Speak to Macrish (Voice Mic)">🎙️</button>
+              <button type="submit" class="hud-send-btn">Transmit</button>
+            </form>
+          </div>
 
       <!-- PANEL 2: SMART ALARM & NIGHTSTAND CONTROLS -->
       <div class="hud-panel" id="hudPanelAlarm" hidden>
@@ -431,17 +460,27 @@
         </div>
       </div>
 
-      <!-- PANEL 4: GEMINI FLASH API KEY SETTING -->
+      <!-- PANEL 4: GEMINI 1.5 & 2.5 MODEL ENGINE SETTINGS -->
       <div class="hud-panel" id="hudPanelApi" hidden>
         <div class="api-settings-card">
           <div class="api-badge-row">
-            <span class="api-model-pill">⚡ GOOGLE GEMINI 1.5 FLASH</span>
+            <span class="api-model-pill" id="activeModelBadge">⚡ GEMINI 1.5 FLASH</span>
+            <span class="api-model-pill" style="background:#EDE9FE; color:#5B21B6;">🚀 GEMINI 2.5 READY</span>
             <span class="api-free-pill">100% FREE TIER</span>
           </div>
-          <h4 class="hud-section-header">Client-Side Gemini Flash Intelligence</h4>
+          <h4 class="hud-section-header">Client-Side Gemini AI Intelligence</h4>
           <p class="hud-card-desc">
-            Macrish works 100% offline with its built-in rule engine. To unlock deep conversational reasoning, personalized routine advice, and smart answers in Bangla &amp; English, enter your free Google Gemini API key. Stored strictly in your browser's private memory.
+            Macrish supports Google's <strong>Gemini 1.5 Flash</strong> and next-gen <strong>Gemini 2.5 / 2.0 Flash</strong> models. Select your desired engine below and paste your Google AI Studio API key. Stored strictly in your browser's local memory.
           </p>
+
+          <div class="api-model-select-wrap">
+            <label class="guide-title" for="geminiModelSelect">Active AI Model Engine:</label>
+            <select id="geminiModelSelect" class="gemini-model-select" title="Choose Gemini Model Engine">
+              <option value="gemini-1.5-flash" selected>⚡ Gemini 1.5 Flash (Ultra Fast &amp; Balanced)</option>
+              <option value="gemini-2.0-flash">🚀 Gemini 2.5 / 2.0 Flash (Next-Gen Intelligence &amp; Deep Bangla)</option>
+              <option value="gemini-1.5-pro">🧠 Gemini 1.5 Pro (In-Depth Analytical Cognitive Plans)</option>
+            </select>
+          </div>
 
           <div class="api-guide-box">
             <span class="guide-title">How to get a key in 1 minute:</span>

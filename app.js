@@ -13,6 +13,9 @@ const KEYS = {
   CHAT_LOG: "macrish_daily_chat_log",
   LAST_ACTIVE: "macrish.lastActiveTimestamp",
   GEMINI_KEY: "macrish.geminiApiKey",
+  GEMINI_MODEL: "macrish.geminiModel",
+  VOICE_SPEAKBACK: "macrish.voiceSpeakback",
+  VOICE_LANG: "macrish.voiceLanguage",
   WAKE_LOCK: "macrish.wakeLockSetting"
 };
 
@@ -325,7 +328,7 @@ function parseTimeFromText(text) {
   return null;
 }
 
-// ---------- Google Gemini Flash API Client ----------
+// ---------- Google Gemini Intelligence Client (1.5 & 2.5/2.0) ----------
 function getGeminiApiKey() {
   return (localStorage.getItem(KEYS.GEMINI_KEY) || "").trim();
 }
@@ -338,9 +341,18 @@ function setGeminiApiKey(key) {
   }
 }
 
-async function verifyGeminiApiKey(apiKey) {
+function getGeminiModel() {
+  return localStorage.getItem(KEYS.GEMINI_MODEL) || "gemini-1.5-flash";
+}
+
+function setGeminiModel(model) {
+  localStorage.setItem(KEYS.GEMINI_MODEL, model || "gemini-1.5-flash");
+}
+
+async function verifyGeminiApiKey(apiKey, model) {
   const cleanKey = apiKey.trim();
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(cleanKey)}`;
+  const targetModel = model || getGeminiModel();
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(cleanKey)}`;
   const payload = {
     contents: [{ parts: [{ text: "Hello" }] }],
     generationConfig: { maxOutputTokens: 5 }
@@ -355,7 +367,7 @@ async function verifyGeminiApiKey(apiKey) {
 
 async function queryGeminiFlash(userInput, apiKey) {
   const cleanKey = apiKey.trim();
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(cleanKey)}`;
+  let targetModel = getGeminiModel();
   const systemPrompt = `You are Macrish v5.0, an intelligent, respectful, and motivating personal AI companion (inspired by Iron Man's J.A.R.V.I.S.) for Fahad sir inside his Habit Ledger app.
 Core Instructions:
 - Keep answers direct, friendly, and actionable (2-4 sentences max unless the user specifically asks for a detailed plan or explanation).
@@ -377,11 +389,24 @@ Core Instructions:
     }
   };
 
-  const response = await fetch(url, {
+  let url = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(cleanKey)}`;
+  let response = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
   });
+
+  // Graceful fallback to gemini-1.5-flash if 2.0/2.5 model returns 404
+  if (response.status === 404 && targetModel !== "gemini-1.5-flash") {
+    console.warn(`${targetModel} not found on endpoint, falling back to gemini-1.5-flash`);
+    targetModel = "gemini-1.5-flash";
+    url = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(cleanKey)}`;
+    response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+  }
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
@@ -392,6 +417,91 @@ Core Instructions:
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!text) throw new Error("No response text from Gemini API");
   return text.trim();
+}
+
+// ---------- Live Talk (Web Speech API STT & TTS) ----------
+const SpeechRecognition = typeof window !== "undefined" ? (window.SpeechRecognition || window.webkitSpeechRecognition) : null;
+let recognitionInstance = null;
+let isLiveTalkMode = false;
+let isListeningActive = false;
+
+function getVoiceLanguage() {
+  return localStorage.getItem(KEYS.VOICE_LANG) || "bn-BD";
+}
+
+function setVoiceLanguage(lang) {
+  localStorage.setItem(KEYS.VOICE_LANG, lang);
+  if (recognitionInstance) {
+    recognitionInstance.lang = lang;
+  }
+}
+
+function isVoiceSpeakbackEnabled() {
+  const stored = localStorage.getItem(KEYS.VOICE_SPEAKBACK);
+  return stored === null ? true : stored === "true";
+}
+
+function setVoiceSpeakbackEnabled(val) {
+  localStorage.setItem(KEYS.VOICE_SPEAKBACK, String(val));
+}
+
+function speakMacrishResponse(text) {
+  if (!isVoiceSpeakbackEnabled() || typeof window === "undefined" || !window.speechSynthesis) return;
+
+  try {
+    window.speechSynthesis.cancel();
+
+    // Clean text of markdown/symbols for clean pronunciation
+    const clean = text
+      .replace(/[#*_`~[\]()]/g, "")
+      .replace(/https?:\/\/\S+/g, "")
+      .replace(/[•-]/g, "")
+      .trim();
+
+    if (!clean) return;
+
+    const utterance = new SpeechSynthesisUtterance(clean);
+    const isBengali = /[\u0980-\u09FF]/.test(clean);
+    utterance.lang = isBengali ? "bn-BD" : "en-US";
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+
+    const voices = window.speechSynthesis.getVoices();
+    if (voices && voices.length > 0) {
+      const match = voices.find(v => v.lang && v.lang.toLowerCase().startsWith(isBengali ? "bn" : "en"));
+      if (match) utterance.voice = match;
+    }
+
+    const sunSphere = document.getElementById("macrishSunSphere");
+    const stopBtn = document.getElementById("stopVoiceSpeechBtn");
+
+    utterance.onstart = () => {
+      if (sunSphere) sunSphere.classList.add("speaking");
+      if (stopBtn) stopBtn.style.display = "inline-flex";
+    };
+
+    utterance.onend = () => {
+      if (sunSphere) sunSphere.classList.remove("speaking");
+      if (stopBtn) stopBtn.style.display = "none";
+      // If Live Talk mode is active, restart listening for user response!
+      if (isLiveTalkMode && recognitionInstance && !isListeningActive) {
+        setTimeout(() => {
+          if (isLiveTalkMode && !isListeningActive) {
+            try { recognitionInstance.start(); } catch(e) {}
+          }
+        }, 350);
+      }
+    };
+
+    utterance.onerror = () => {
+      if (sunSphere) sunSphere.classList.remove("speaking");
+      if (stopBtn) stopBtn.style.display = "none";
+    };
+
+    window.speechSynthesis.speak(utterance);
+  } catch(e) {
+    console.warn("Speech synthesis error:", e);
+  }
 }
 
 async function processConversationalInput(userInput) {
@@ -439,6 +549,8 @@ async function processConversationalInput(userInput) {
     // 3. Conversational AI — Check for Gemini Flash Key
     const apiKey = getGeminiApiKey();
     if (apiKey) {
+      const activeModel = getGeminiModel();
+      const modelDisplayName = activeModel.includes("2.0") ? "Gemini 2.5 / 2.0" : (activeModel.includes("pro") ? "Gemini 1.5 Pro" : "Gemini 1.5 Flash");
       const chatContainer = document.getElementById("hudChatHistory");
       const tempId = "thinking_" + Date.now();
       if (chatContainer) {
@@ -447,7 +559,7 @@ async function processConversationalInput(userInput) {
         thinkingBubble.id = tempId;
         thinkingBubble.innerHTML = `
           <div class="chat-author-tag">MACRISH J.A.R.V.I.S.</div>
-          <div class="thinking-pulse">⚡ Connecting to Gemini Flash 1.5...</div>
+          <div class="thinking-pulse">⚡ Connecting to ${modelDisplayName}...</div>
         `;
         chatContainer.appendChild(thinkingBubble);
         chatContainer.scrollTop = chatContainer.scrollHeight;
@@ -479,6 +591,9 @@ async function processConversationalInput(userInput) {
   chatLog.push({ role: "macrish", text: botReply, timestamp: Date.now() });
   saveChatLog(chatLog);
   renderHudChat();
+
+  // Speak aloud if enabled
+  speakMacrishResponse(botReply);
 
   // Pulse Solar Orb during speech
   const sunSphere = document.getElementById("macrishSunSphere");
@@ -1140,20 +1255,40 @@ function setupEvents() {
   hudTabVault.addEventListener("click", () => setHudTab("vault"));
   hudTabApi.addEventListener("click", () => setHudTab("api"));
 
-  // Gemini Flash 1.5 API Key Configuration & Verification
+  // Gemini 1.5 & 2.5 API Key & Model Configuration
   const apiKeyInput = document.getElementById("geminiApiKeyInput");
   const saveApiKeyBtn = document.getElementById("saveApiKeyBtn");
   const clearApiKeyBtn = document.getElementById("clearApiKeyBtn");
   const apiKeyStatus = document.getElementById("apiKeyStatus");
   const apiKeyStatusDot = document.getElementById("apiKeyStatusDot");
+  const geminiModelSelect = document.getElementById("geminiModelSelect");
+  const activeModelBadge = document.getElementById("activeModelBadge");
 
   function updateApiKeyUI() {
-    const saved = getGeminiApiKey();
-    if (apiKeyInput && !apiKeyInput.value) {
-      apiKeyInput.value = saved;
+    const savedKey = getGeminiApiKey();
+    const currentModel = getGeminiModel();
+
+    if (geminiModelSelect) {
+      geminiModelSelect.value = currentModel;
     }
-    if (saved) {
-      if (apiKeyStatus) apiKeyStatus.textContent = "Status: Gemini Flash 1.5 Active & Verified (Online AI Mode)";
+
+    if (activeModelBadge) {
+      if (currentModel === "gemini-2.0-flash") {
+        activeModelBadge.textContent = "🚀 GEMINI 2.5 / 2.0 FLASH";
+      } else if (currentModel === "gemini-1.5-pro") {
+        activeModelBadge.textContent = "🧠 GEMINI 1.5 PRO";
+      } else {
+        activeModelBadge.textContent = "⚡ GEMINI 1.5 FLASH";
+      }
+    }
+
+    if (apiKeyInput && !apiKeyInput.value) {
+      apiKeyInput.value = savedKey;
+    }
+
+    if (savedKey) {
+      const modelName = currentModel.includes("2.0") ? "Gemini 2.5 / 2.0 Flash" : (currentModel.includes("pro") ? "Gemini 1.5 Pro" : "Gemini 1.5 Flash");
+      if (apiKeyStatus) apiKeyStatus.textContent = `Status: ${modelName} Active & Verified (Online AI Mode)`;
       if (apiKeyStatusDot) apiKeyStatusDot.className = "api-status-indicator active";
       if (clearApiKeyBtn) clearApiKeyBtn.style.display = "inline-block";
     } else {
@@ -1161,6 +1296,13 @@ function setupEvents() {
       if (apiKeyStatusDot) apiKeyStatusDot.className = "api-status-indicator";
       if (clearApiKeyBtn) clearApiKeyBtn.style.display = "none";
     }
+  }
+
+  if (geminiModelSelect) {
+    geminiModelSelect.addEventListener("change", (e) => {
+      setGeminiModel(e.target.value);
+      updateApiKeyUI();
+    });
   }
 
   updateApiKeyUI();
@@ -1173,23 +1315,24 @@ function setupEvents() {
         return;
       }
 
-      if (apiKeyStatus) apiKeyStatus.textContent = "Status: Verifying key with Google AI...";
+      const chosenModel = getGeminiModel();
+      if (apiKeyStatus) apiKeyStatus.textContent = `Status: Verifying key with ${chosenModel}...`;
       if (apiKeyStatusDot) apiKeyStatusDot.className = "api-status-indicator verifying";
       saveApiKeyBtn.disabled = true;
 
       try {
-        const res = await verifyGeminiApiKey(raw);
+        const res = await verifyGeminiApiKey(raw, chosenModel);
         if (res.ok) {
           setGeminiApiKey(raw);
           updateApiKeyUI();
           triggerHaptic();
-          alert("Success! Google Gemini Flash 1.5 is now active and verified.");
+          alert(`Success! ${chosenModel} is now active and verified.`);
         } else {
           const errData = await res.json().catch(() => ({}));
           const errMsg = errData.error?.message || `HTTP ${res.status}`;
           if (apiKeyStatus) apiKeyStatus.textContent = `Status: Invalid Key (${errMsg})`;
           if (apiKeyStatusDot) apiKeyStatusDot.className = "api-status-indicator error";
-          alert(`Google AI rejected this key: ${errMsg}\nPlease verify that you copied the complete key from aistudio.google.com/app/apikey.`);
+          alert(`Google AI returned an error: ${errMsg}\nPlease verify that your key is valid for ${chosenModel}.`);
         }
       } catch (err) {
         setGeminiApiKey(raw);
@@ -1209,6 +1352,80 @@ function setupEvents() {
       updateApiKeyUI();
       triggerHaptic();
       alert("Gemini API Key removed. Macrish is now in offline mode.");
+    });
+  }
+
+  // Live Talk & Voice Speech Controls
+  setupSpeechRecognition();
+
+  const liveTalkMasterBtn = document.getElementById("liveTalkMasterBtn");
+  const hudVoiceMicBtn = document.getElementById("hudVoiceMicBtn");
+  const voiceLanguageSelect = document.getElementById("voiceLanguageSelect");
+  const voiceSpeakbackCheckbox = document.getElementById("voiceSpeakbackCheckbox");
+  const stopVoiceSpeechBtn = document.getElementById("stopVoiceSpeechBtn");
+
+  if (voiceLanguageSelect) {
+    voiceLanguageSelect.value = getVoiceLanguage();
+    voiceLanguageSelect.addEventListener("change", (e) => {
+      setVoiceLanguage(e.target.value);
+    });
+  }
+
+  if (voiceSpeakbackCheckbox) {
+    voiceSpeakbackCheckbox.checked = isVoiceSpeakbackEnabled();
+    voiceSpeakbackCheckbox.addEventListener("change", (e) => {
+      setVoiceSpeakbackEnabled(e.target.checked);
+    });
+  }
+
+  if (stopVoiceSpeechBtn) {
+    stopVoiceSpeechBtn.addEventListener("click", () => {
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
+      const sunSphere = document.getElementById("macrishSunSphere");
+      if (sunSphere) sunSphere.classList.remove("speaking");
+      stopVoiceSpeechBtn.style.display = "none";
+    });
+  }
+
+  if (liveTalkMasterBtn) {
+    liveTalkMasterBtn.addEventListener("click", () => {
+      if (!SpeechRecognition) {
+        alert("Live Talk voice recognition is not supported in this browser. Please use Safari on iPhone or Chrome on Desktop/Android.");
+        return;
+      }
+      isLiveTalkMode = !isLiveTalkMode;
+      triggerHaptic();
+
+      if (isLiveTalkMode) {
+        liveTalkMasterBtn.classList.add("active");
+        try {
+          recognitionInstance.start();
+        } catch(e) {
+          console.warn(e);
+        }
+      } else {
+        liveTalkMasterBtn.classList.remove("active");
+        try {
+          recognitionInstance.stop();
+        } catch(e) {}
+        if (window.speechSynthesis) window.speechSynthesis.cancel();
+        updateVoiceUI(false);
+      }
+    });
+  }
+
+  if (hudVoiceMicBtn) {
+    hudVoiceMicBtn.addEventListener("click", () => {
+      if (!SpeechRecognition) {
+        alert("Voice recognition is not supported in this browser. Please use Safari on iPhone or Chrome on Desktop/Android.");
+        return;
+      }
+      triggerHaptic();
+      if (isListeningActive) {
+        try { recognitionInstance.stop(); } catch(e) {}
+      } else {
+        try { recognitionInstance.start(); } catch(e) { console.warn(e); }
+      }
     });
   }
 
