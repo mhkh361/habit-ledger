@@ -434,13 +434,36 @@
       <!-- PANEL 4: GEMINI FLASH API KEY SETTING -->
       <div class="hud-panel" id="hudPanelApi" hidden>
         <div class="api-settings-card">
-          <h4 class="hud-section-header">Client-Side Gemini API Key (Optional)</h4>
-          <p class="hud-card-desc">Macrish works 100% offline with its built-in rule engine. If you want full Gemini Flash AI intelligence, enter your Google Gemini API key below. Stored strictly in your browser's local memory.</p>
-          <div class="api-input-wrap">
-            <input type="password" id="geminiApiKeyInput" placeholder="AIzaSy..." autocomplete="off">
-            <button class="primary-action-btn" id="saveApiKeyBtn" type="button">Save Key</button>
+          <div class="api-badge-row">
+            <span class="api-model-pill">⚡ GOOGLE GEMINI 1.5 FLASH</span>
+            <span class="api-free-pill">100% FREE TIER</span>
           </div>
-          <span class="api-status-tag" id="apiKeyStatus">Status: Using Built-in Offline Neural Engine</span>
+          <h4 class="hud-section-header">Client-Side Gemini Flash Intelligence</h4>
+          <p class="hud-card-desc">
+            Macrish works 100% offline with its built-in rule engine. To unlock deep conversational reasoning, personalized routine advice, and smart answers in Bangla &amp; English, enter your free Google Gemini API key. Stored strictly in your browser's private memory.
+          </p>
+
+          <div class="api-guide-box">
+            <span class="guide-title">How to get a key in 1 minute:</span>
+            <ol class="guide-steps">
+              <li>Visit <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">aistudio.google.com/app/apikey</a></li>
+              <li>Sign in with your Google account &amp; click <strong>"Create API key"</strong></li>
+              <li>Copy the key (starts with <code>AIzaSy...</code>) and paste below.</li>
+            </ol>
+          </div>
+
+          <div class="api-input-wrap">
+            <input type="text" id="geminiApiKeyInput" placeholder="Paste key: AIzaSy..." autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
+            <div class="api-button-group">
+              <button class="primary-action-btn" id="saveApiKeyBtn" type="button">Save &amp; Verify Key</button>
+              <button class="ghost-btn" id="clearApiKeyBtn" type="button" style="display:none; color:var(--danger-coral);">Remove Key</button>
+            </div>
+          </div>
+
+          <div class="api-status-box">
+            <span class="api-status-indicator" id="apiKeyStatusDot"></span>
+            <span class="api-status-tag" id="apiKeyStatus">Status: Using Built-in Offline Neural Engine</span>
+          </div>
         </div>
       </div>
 

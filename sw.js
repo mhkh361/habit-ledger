@@ -1,5 +1,5 @@
-// Habit Ledger Service Worker v4 (Cognitive Edition)
-const CACHE_NAME = "ledger-cache-v4";
+// Habit Ledger Service Worker v5 (Cognitive Edition)
+const CACHE_NAME = "ledger-cache-v5";
 const FILES_TO_CACHE = [
   "./",
   "./index.html",

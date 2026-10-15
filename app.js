@@ -325,12 +325,83 @@ function parseTimeFromText(text) {
   return null;
 }
 
-function processConversationalInput(userInput) {
+// ---------- Google Gemini Flash API Client ----------
+function getGeminiApiKey() {
+  return (localStorage.getItem(KEYS.GEMINI_KEY) || "").trim();
+}
+
+function setGeminiApiKey(key) {
+  if (key) {
+    localStorage.setItem(KEYS.GEMINI_KEY, key.trim());
+  } else {
+    localStorage.removeItem(KEYS.GEMINI_KEY);
+  }
+}
+
+async function verifyGeminiApiKey(apiKey) {
+  const cleanKey = apiKey.trim();
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(cleanKey)}`;
+  const payload = {
+    contents: [{ parts: [{ text: "Hello" }] }],
+    generationConfig: { maxOutputTokens: 5 }
+  };
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  return response;
+}
+
+async function queryGeminiFlash(userInput, apiKey) {
+  const cleanKey = apiKey.trim();
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(cleanKey)}`;
+  const systemPrompt = `You are Macrish v5.0, an intelligent, respectful, and motivating personal AI companion (inspired by Iron Man's J.A.R.V.I.S.) for Fahad sir inside his Habit Ledger app.
+Core Instructions:
+- Keep answers direct, friendly, and actionable (2-4 sentences max unless the user specifically asks for a detailed plan or explanation).
+- If the user writes in Bengali or Banglish, answer in warm, natural Bengali (বাংলা).
+- If the user writes in English, answer in crisp English.
+- Emphasize daily discipline, consistency, time management, and health.`;
+
+  const payload = {
+    contents: [
+      {
+        parts: [
+          { text: `${systemPrompt}\n\nFahad sir: ${userInput}\n\nMacrish:` }
+        ]
+      }
+    ],
+    generationConfig: {
+      temperature: 0.7,
+      maxOutputTokens: 350
+    }
+  };
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error?.message || `HTTP ${response.status}`);
+  }
+
+  const data = await response.json();
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) throw new Error("No response text from Gemini API");
+  return text.trim();
+}
+
+async function processConversationalInput(userInput) {
   const input = userInput.trim();
   if (!input) return;
 
   // Append user message
   chatLog.push({ role: "user", text: input, timestamp: Date.now() });
+  saveChatLog(chatLog);
+  renderHudChat();
 
   // 1. Scan for AI Importance & Vault Storage
   scanAndStoreImportantInsights(input);
@@ -365,13 +436,44 @@ function processConversationalInput(userInput) {
     addScheduleTask(taskTitle, startStr, endStr);
     botReply = `টাইমটেবিলে '${taskTitle}' (${formatTime12h(startStr)} - ${formatTime12h(endStr)}) যুক্ত করা হয়েছে।`;
   } else {
-    // Default J.A.R.V.I.S. Conversational Intelligence
-    const greetings = [
-      `জ্বী ফাহাদ স্যার। সব সিস্টেম ১০০% অপটিমাল। অ্যালার্ম সেট করতে পারেন (যেমন 'আমাকে সকাল ৫টা বাজে উঠায় দিবা'), নতুন কাজ যোগ করতে পারেন বা কোনো গুরুত্বপূর্ণ সিদ্ধান্ত জানাতে পারেন।`,
-      `সিস্টেম প্রস্তুত ফাহাদ। কোনো সিদ্ধান্ত বা লক্ষ্য থাকলে শেয়ার করতে পারেন—AI Importance Scanner তা স্বয়ংক্রিয়ভাবে ভল্টে সংরক্ষণ করবে।`,
-      `Protocol calibrated. All circuits running at zero background battery consumption. How may I serve your daily routine?`
-    ];
-    botReply = greetings[Math.floor(Math.random() * greetings.length)];
+    // 3. Conversational AI — Check for Gemini Flash Key
+    const apiKey = getGeminiApiKey();
+    if (apiKey) {
+      const chatContainer = document.getElementById("hudChatHistory");
+      const tempId = "thinking_" + Date.now();
+      if (chatContainer) {
+        const thinkingBubble = document.createElement("div");
+        thinkingBubble.className = "chat-bubble macrish";
+        thinkingBubble.id = tempId;
+        thinkingBubble.innerHTML = `
+          <div class="chat-author-tag">MACRISH J.A.R.V.I.S.</div>
+          <div class="thinking-pulse">⚡ Connecting to Gemini Flash 1.5...</div>
+        `;
+        chatContainer.appendChild(thinkingBubble);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      }
+
+      const sunSphere = document.getElementById("macrishSunSphere");
+      if (sunSphere) sunSphere.classList.add("speaking");
+
+      try {
+        botReply = await queryGeminiFlash(input, apiKey);
+      } catch (err) {
+        console.warn("Gemini query error:", err);
+        botReply = `(Offline Mode) ফাহাদ স্যার, অনলাইনে সংযোগে সমস্যা হয়েছে: ${err.message}। তবে লোকাল সব সিস্টেম সক্রিয় আছে।`;
+      } finally {
+        document.getElementById(tempId)?.remove();
+        if (sunSphere) sunSphere.classList.remove("speaking");
+      }
+    } else {
+      // Default J.A.R.V.I.S. Conversational Intelligence
+      const greetings = [
+        `জ্বী ফাহাদ স্যার। সব সিস্টেম ১০০% অপটিমাল। অ্যালার্ম সেট করতে পারেন (যেমন 'আমাকে সকাল ৫টা বাজে উঠায় দিবা'), নতুন কাজ যোগ করতে পারেন বা কোনো গুরুত্বপূর্ণ সিদ্ধান্ত জানাতে পারেন।`,
+        `সিস্টেম প্রস্তুত ফাহাদ। কোনো সিদ্ধান্ত বা লক্ষ্য থাকলে শেয়ার করতে পারেন—AI Importance Scanner তা স্বয়ংক্রিয়ভাবে ভল্টে সংরক্ষণ করবে।`,
+        `Protocol calibrated. All circuits running at zero background battery consumption. How may I serve your daily routine?`
+      ];
+      botReply = greetings[Math.floor(Math.random() * greetings.length)];
+    }
   }
 
   chatLog.push({ role: "macrish", text: botReply, timestamp: Date.now() });
@@ -1028,6 +1130,8 @@ function setupEvents() {
       renderAlarmsList();
     } else if (tab === "vault") {
       renderVaultView();
+    } else if (tab === "api") {
+      updateApiKeyUI();
     }
   }
 
@@ -1036,19 +1140,92 @@ function setupEvents() {
   hudTabVault.addEventListener("click", () => setHudTab("vault"));
   hudTabApi.addEventListener("click", () => setHudTab("api"));
 
+  // Gemini Flash 1.5 API Key Configuration & Verification
+  const apiKeyInput = document.getElementById("geminiApiKeyInput");
+  const saveApiKeyBtn = document.getElementById("saveApiKeyBtn");
+  const clearApiKeyBtn = document.getElementById("clearApiKeyBtn");
+  const apiKeyStatus = document.getElementById("apiKeyStatus");
+  const apiKeyStatusDot = document.getElementById("apiKeyStatusDot");
+
+  function updateApiKeyUI() {
+    const saved = getGeminiApiKey();
+    if (apiKeyInput && !apiKeyInput.value) {
+      apiKeyInput.value = saved;
+    }
+    if (saved) {
+      if (apiKeyStatus) apiKeyStatus.textContent = "Status: Gemini Flash 1.5 Active & Verified (Online AI Mode)";
+      if (apiKeyStatusDot) apiKeyStatusDot.className = "api-status-indicator active";
+      if (clearApiKeyBtn) clearApiKeyBtn.style.display = "inline-block";
+    } else {
+      if (apiKeyStatus) apiKeyStatus.textContent = "Status: Using Built-in Offline Neural Engine";
+      if (apiKeyStatusDot) apiKeyStatusDot.className = "api-status-indicator";
+      if (clearApiKeyBtn) clearApiKeyBtn.style.display = "none";
+    }
+  }
+
+  updateApiKeyUI();
+
+  if (saveApiKeyBtn) {
+    saveApiKeyBtn.addEventListener("click", async () => {
+      const raw = (apiKeyInput?.value || "").trim();
+      if (!raw) {
+        alert("Please paste a valid Gemini API key (starts with AIzaSy...).");
+        return;
+      }
+
+      if (apiKeyStatus) apiKeyStatus.textContent = "Status: Verifying key with Google AI...";
+      if (apiKeyStatusDot) apiKeyStatusDot.className = "api-status-indicator verifying";
+      saveApiKeyBtn.disabled = true;
+
+      try {
+        const res = await verifyGeminiApiKey(raw);
+        if (res.ok) {
+          setGeminiApiKey(raw);
+          updateApiKeyUI();
+          triggerHaptic();
+          alert("Success! Google Gemini Flash 1.5 is now active and verified.");
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          const errMsg = errData.error?.message || `HTTP ${res.status}`;
+          if (apiKeyStatus) apiKeyStatus.textContent = `Status: Invalid Key (${errMsg})`;
+          if (apiKeyStatusDot) apiKeyStatusDot.className = "api-status-indicator error";
+          alert(`Google AI rejected this key: ${errMsg}\nPlease verify that you copied the complete key from aistudio.google.com/app/apikey.`);
+        }
+      } catch (err) {
+        setGeminiApiKey(raw);
+        updateApiKeyUI();
+        if (apiKeyStatus) apiKeyStatus.textContent = "Status: Key saved locally (Network offline, will use when connected)";
+        alert("Key saved locally. Note: Could not reach Google AI directly (check your internet connection).");
+      } finally {
+        saveApiKeyBtn.disabled = false;
+      }
+    });
+  }
+
+  if (clearApiKeyBtn) {
+    clearApiKeyBtn.addEventListener("click", () => {
+      setGeminiApiKey("");
+      if (apiKeyInput) apiKeyInput.value = "";
+      updateApiKeyUI();
+      triggerHaptic();
+      alert("Gemini API Key removed. Macrish is now in offline mode.");
+    });
+  }
+
   // HUD Chat Submission
-  document.getElementById("hudChatForm").addEventListener("submit", (e) => {
+  document.getElementById("hudChatForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const input = document.getElementById("hudChatInput");
-    processConversationalInput(input.value);
+    const val = input.value;
     input.value = "";
+    await processConversationalInput(val);
   });
 
   // Prompt suggestion chips
   document.querySelectorAll(".prompt-chip").forEach(chip => {
-    chip.addEventListener("click", (e) => {
+    chip.addEventListener("click", async (e) => {
       const prompt = e.target.getAttribute("data-prompt");
-      processConversationalInput(prompt);
+      await processConversationalInput(prompt);
     });
   });
 

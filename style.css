@@ -1659,6 +1659,154 @@ body {
   color: var(--text-main);
 }
 
+/* ==================== GEMINI FLASH API KEY SETTINGS ==================== */
+.api-settings-card {
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.api-badge-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.api-model-pill {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  color: #1E40AF;
+  background: #DBEAFE;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  letter-spacing: 0.05em;
+}
+
+.api-free-pill {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  color: #065F46;
+  background: #D1FAE5;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+}
+
+.api-guide-box {
+  background: var(--surface);
+  border: 1px dashed var(--sun-gold);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.guide-title {
+  display: block;
+  font-weight: 700;
+  color: var(--sun-amber);
+  margin-bottom: 6px;
+}
+
+.guide-steps {
+  margin-left: 20px;
+  color: var(--text-main);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.guide-steps a {
+  color: var(--sun-amber);
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.api-input-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.api-input-wrap input {
+  background: var(--surface);
+  border: 1.5px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  font-family: var(--font-mono);
+  font-size: 13.5px;
+  color: var(--text-main);
+  outline: none;
+  transition: border-color 0.16s ease;
+  width: 100%;
+}
+
+.api-input-wrap input:focus {
+  border-color: var(--sun-gold);
+  box-shadow: 0 0 10px var(--sun-corona-glow);
+}
+
+.api-button-group {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.api-status-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  margin-top: 4px;
+}
+
+.api-status-indicator {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  flex-shrink: 0;
+  transition: background-color 0.2s ease;
+}
+
+.api-status-indicator.active {
+  background: var(--emerald-confirm);
+  box-shadow: 0 0 8px var(--emerald-confirm);
+}
+
+.api-status-indicator.error {
+  background: var(--danger-coral);
+  box-shadow: 0 0 8px var(--danger-coral);
+}
+
+.api-status-indicator.verifying {
+  background: var(--sun-gold);
+  animation: pulse-dot 1s infinite alternate;
+}
+
+.api-status-tag {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.thinking-pulse {
+  color: var(--sun-amber);
+  font-style: italic;
+  font-size: 13px;
+  animation: pulse-dot 1.2s infinite ease-in-out;
+}
+
 /* ==================== FULL-SCREEN SOLAR WAKE-UP OVERLAY ==================== */
 .macrish-alarm-overlay {
   position: fixed;
