@@ -1,10 +1,12 @@
-// Habit Ledger Service Worker v7 (Wake-Word & Live Talk Edition)
-const CACHE_NAME = "ledger-cache-v7";
+// Habit Ledger Service Worker v8 (Cognitive & Live Talk Edition)
+const CACHE_NAME = "ledger-cache-v8";
 const FILES_TO_CACHE = [
   "./",
   "./index.html",
   "./style.css",
+  "./style.css?v=8",
   "./app.js",
+  "./app.js?v=8",
   "./manifest.json",
   "./icon-192.png",
   "./icon-512.png"
@@ -26,22 +28,37 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-// Stale-while-revalidate for local files, network-fallback with catch for fonts/icons
+// Network-First for navigation & core assets to guarantee immediate updates; offline fallback to cache
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
-  event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const networked = fetch(event.request)
+
+  // HTML navigation requests
+  if (event.request.mode === "navigate") {
+    event.respondWith(
+      fetch(event.request)
         .then((response) => {
-          if (response && response.status === 200 && response.type === "basic") {
+          if (response && response.status === 200) {
             const cacheCopy = response.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cacheCopy));
           }
           return response;
         })
-        .catch(() => cached);
-      return cached || networked;
-    })
+        .catch(() => caches.match("./index.html"))
+    );
+    return;
+  }
+
+  // Core assets: Try network first, update cache in background, fallback to cache
+  event.respondWith(
+    fetch(event.request)
+      .then((response) => {
+        if (response && response.status === 200) {
+          const cacheCopy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cacheCopy));
+        }
+        return response;
+      })
+      .catch(() => caches.match(event.request))
   );
 });
 

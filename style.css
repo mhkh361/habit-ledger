@@ -1722,6 +1722,38 @@ body {
   background: var(--surface);
 }
 
+.hud-voice-speak-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #FEF3C7;
+  border: 1.5px solid var(--sun-gold);
+  color: #92400E;
+  border-radius: var(--radius-sm);
+  padding: 10px 16px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.16s ease;
+  box-shadow: 0 2px 6px rgba(245, 158, 11, 0.15);
+}
+
+.hud-voice-speak-btn:hover {
+  background: #FDE68A;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(245, 158, 11, 0.25);
+}
+
+.hud-voice-speak-btn.listening {
+  background: #FEE2E2;
+  border-color: #EF4444;
+  color: #991B1B;
+  box-shadow: 0 0 14px rgba(239, 68, 68, 0.45);
+  animation: pulse-dot 1s infinite alternate;
+}
+
 .hud-mic-btn {
   background: var(--surface-raised);
   border: 1px solid var(--border-subtle);

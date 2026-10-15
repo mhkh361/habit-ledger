@@ -20,7 +20,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,600&display=swap" rel="stylesheet">
   
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=8">
 </head>
 <body>
 
@@ -367,7 +367,7 @@
               <div class="live-talk-left">
                 <button type="button" class="live-talk-toggle-btn" id="liveTalkMasterBtn" title="Start real-time voice call with Macrish">
                   <span class="live-talk-dot"></span>
-                  <span class="live-talk-btn-text">🎙️ Start Live Talk</span>
+                  <span class="live-talk-btn-text">🎙️ Start Live Voice Call (লাইভ কথা বলুন)</span>
                 </button>
                 <button type="button" class="wake-hud-toggle-btn active" id="hudWakeWordToggleBtn" title="Toggle 'Hey Macrish' wake word">
                   <span class="wake-hud-dot"></span>
@@ -406,9 +406,12 @@
             </div>
 
             <form class="hud-chat-form" id="hudChatForm">
-              <input type="text" id="hudChatInput" placeholder="Talk or type in Bangla or English... (e.g. 'আমাকে সকাল ৫টা বাজে উঠায় দিবা')" autocomplete="off" required>
-              <button type="button" class="hud-mic-btn" id="hudVoiceMicBtn" title="Speak to Macrish (Voice Mic)">🎙️</button>
-              <button type="submit" class="hud-send-btn">Transmit</button>
+              <input type="text" id="hudChatInput" placeholder="Talk or type in Bangla or English... (e.g. 'আমাকে সকাল ৫টা বাজে উঠায় দিবা')" autocomplete="off">
+              <button type="button" class="hud-voice-speak-btn" id="hudVoiceMicBtn" title="Speak to Macrish (কণ্ঠ দিয়ে কথা বলুন)">
+                <span class="voice-mic-icon">🎙️</span>
+                <span class="voice-mic-label">কথা বলুন</span>
+              </button>
+              <button type="submit" class="hud-send-btn">Send ↵</button>
             </form>
           </div>
 
@@ -637,6 +640,6 @@
     </div>
   </div>
 
-  <script src="app.js"></script>
+  <script src="app.js?v=8"></script>
 </body>
 </html>

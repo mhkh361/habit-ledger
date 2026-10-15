@@ -2010,9 +2010,19 @@ function handleOnOpenGreeting() {
 }
 
 // ---------- 15. Lifecycle & Service Worker ----------
-if ("serviceWorker" in navigator) {
+if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js").catch(e => console.warn(e));
+    navigator.serviceWorker.register("sw.js").then((reg) => {
+      reg.update().catch(() => {});
+    }).catch(e => console.warn(e));
+  });
+
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (!refreshing) {
+      refreshing = true;
+      window.location.reload();
+    }
   });
 }
 
