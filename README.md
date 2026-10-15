@@ -4,10 +4,10 @@
 
   <br/><br/>
 
-  [![Live Demo](https://img.shields.io/badge/Live%20App-Launch%20GitHub%20Pages-F59E0B?style=for-the-badge&logo=githubpages&logoColor=white)](https://mhkh361.github.io/-habit-ledger-/)
-  [![Resource Drain](https://img.shields.io/badge/Resource%20Drain-0.00%25%20Zero%20CPU-10B981?style=for-the-badge&logo=speedtest&logoColor=white)](#-0-background-resource-drain-engine)
-  [![Audio Architecture](https://img.shields.io/badge/Audio-IndexedDB%20%2B%20WebAudio-EA580C?style=for-the-badge)](#-conversational-smart-alarm--wake-up-music)
-  [![Local-First](https://img.shields.io/badge/Privacy-100%25%20Local--First-6366F1?style=for-the-badge)](#-ai-importance-scanner--memory-vault)
+  [![Live Demo](https://img.shields.io/badge/Live%20App-Launch%20GitHub%20Pages-F59E0B?style=for-the-badge&logo=githubpages&logoColor=white)](https://mhkh361.github.io/habit-ledger/)
+  [![Resource Drain](https://img.shields.io/badge/Resource%20Drain-0.00%25%20Zero%20CPU-10B981?style=for-the-badge&logo=speedtest&logoColor=white)](#-core-highlights--innovations)
+  [![Audio Architecture](https://img.shields.io/badge/Audio-IndexedDB%20%2B%20WebAudio-EA580C?style=for-the-badge)](#-2-conversational-smart-alarm--wake-up-music)
+  [![Local-First](https://img.shields.io/badge/Privacy-100%25%20Local--First-6366F1?style=for-the-badge)](#-3-ai-importance-scanner--memory-vault)
   [![PWA Ready](https://img.shields.io/badge/PWA-Offline%20Installable-D97706?style=for-the-badge)](#-pwa-installation-guide)
 
   <p align="center">
@@ -69,13 +69,13 @@
 Install Habit Ledger directly onto your home screen for an app-like experience with 100% offline functionality.
 
 ### 🍏 iPhone / iPad (Safari)
-1. Open the live link: **[https://mhkh361.github.io/-habit-ledger-/](https://mhkh361.github.io/-habit-ledger-/)** in **Safari**.
+1. Open the live link: **[https://mhkh361.github.io/habit-ledger/](https://mhkh361.github.io/habit-ledger/)** in **Safari**.
 2. Tap the **Share** button (`⎙` / square with arrow) at the bottom.
 3. Scroll down and tap **"Add to Home Screen"** (`➕`).
 4. Tap **Add** in the top right corner.
 
 ### 🤖 Android (Chrome)
-1. Open **[https://mhkh361.github.io/-habit-ledger-/](https://mhkh361.github.io/-habit-ledger-/)** in **Google Chrome**.
+1. Open **[https://mhkh361.github.io/habit-ledger/](https://mhkh361.github.io/habit-ledger/)** in **Google Chrome**.
 2. Tap the three-dot menu (**⋮**) in the top right.
 3. Tap **"Install app"** (or **"Add to Home screen"**).
 4. Tap **Install** to confirm.
@@ -88,8 +88,8 @@ The codebase requires **zero external dependencies** or build steps. You can run
 
 ```bash
 # Clone the repository
-git clone https://github.com/mhkh361/-habit-ledger-.git
-cd -habit-ledger-
+git clone https://github.com/mhkh361/habit-ledger.git
+cd habit-ledger
 
 # Run the built-in zero-dependency local server
 node server.cjs
@@ -104,7 +104,7 @@ Open your browser at:
 ## 📂 Project Architecture
 
 ```
--habit-ledger-/
+habit-ledger/
 ├── assets/
 │   └── banner.svg         # Animated SVG Sun-Core header for GitHub
 ├── index.html             # Semantic HTML5 PWA & Macrish HUD layout
