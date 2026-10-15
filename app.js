@@ -16,7 +16,8 @@ const KEYS = {
   GEMINI_MODEL: "macrish.geminiModel",
   VOICE_SPEAKBACK: "macrish.voiceSpeakback",
   VOICE_LANG: "macrish.voiceLanguage",
-  WAKE_LOCK: "macrish.wakeLockSetting"
+  WAKE_LOCK: "macrish.wakeLockSetting",
+  WAKE_WORD: "macrish.wakeWordSetting"
 };
 
 function generateId() {
@@ -419,11 +420,50 @@ Core Instructions:
   return text.trim();
 }
 
-// ---------- Live Talk (Web Speech API STT & TTS) ----------
+// ---------- Live Talk & "Hey Macrish" Wake-Word Engine (Web Speech API STT & TTS) ----------
 const SpeechRecognition = typeof window !== "undefined" ? (window.SpeechRecognition || window.webkitSpeechRecognition) : null;
 let recognitionInstance = null;
 let isLiveTalkMode = false;
 let isListeningActive = false;
+let isRecognitionRunning = false;
+let isAwaitingCommand = false;
+let isSpeakingAloud = false;
+let isWakeWordEnabled = typeof localStorage !== "undefined" ? localStorage.getItem(KEYS.WAKE_WORD) !== "false" : true;
+let restartTimeout = null;
+let micPermissionGranted = false;
+
+const WAKE_WORD_PATTERNS = [
+  /\bhey\s+macrish\b/i,
+  /\bhi\s+macrish\b/i,
+  /\bhello\s+macrish\b/i,
+  /\bok\s+macrish\b/i,
+  /\bmacrish\b/i,
+  /\bmackrish\b/i,
+  /\bmac\s+rish\b/i,
+  /\bmake\s+rich\b/i,
+  /\bhey\s+jarvis\b/i,
+  /\bjarvis\b/i,
+  /হে\s*ম্যাকরিশ/i,
+  /এই\s*ম্যাকরিশ/i,
+  /হেই\s*ম্যাকরিশ/i,
+  /ম্যাকরিশ/i,
+  /ম্যাক্রিশ/i,
+  /ম্যাক\s*রিশ/i
+];
+
+function isWakeWordDetected(text) {
+  if (!text) return false;
+  return WAKE_WORD_PATTERNS.some(p => p.test(text));
+}
+
+function stripWakeWord(text) {
+  if (!text) return "";
+  let cleaned = text;
+  WAKE_WORD_PATTERNS.forEach(p => {
+    cleaned = cleaned.replace(p, "");
+  });
+  return cleaned.replace(/^[,.\s\-—]+/, "").trim();
+}
 
 function getVoiceLanguage() {
   return localStorage.getItem(KEYS.VOICE_LANG) || "bn-BD";
@@ -445,10 +485,283 @@ function setVoiceSpeakbackEnabled(val) {
   localStorage.setItem(KEYS.VOICE_SPEAKBACK, String(val));
 }
 
+function isWakeWordActive() {
+  return isWakeWordEnabled;
+}
+
+function setWakeWordActive(val) {
+  isWakeWordEnabled = !!val;
+  localStorage.setItem(KEYS.WAKE_WORD, String(val));
+  updateWakeWordUIState();
+  if (isWakeWordEnabled) {
+    scheduleRecognitionRestart(100);
+  } else if (!isLiveTalkMode) {
+    stopRecognitionSafely();
+  }
+}
+
+function updateWakeWordUIState(statusOverride) {
+  const heroBtn = document.getElementById("heroWakeWordBtn");
+  const heroText = document.getElementById("heroWakeWordText");
+  const hudBtn = document.getElementById("hudWakeWordToggleBtn");
+  const hudText = document.getElementById("hudWakeWordStatusText");
+
+  if (!SpeechRecognition) {
+    if (heroText) heroText.textContent = "👂 Voice: Not Supported";
+    if (hudText) hudText.textContent = "👂 Not Supported";
+    if (heroBtn) heroBtn.classList.remove("active");
+    if (hudBtn) hudBtn.classList.remove("active");
+    return;
+  }
+
+  if (statusOverride === "permission_denied") {
+    if (heroText) heroText.textContent = "⚠️ Mic Blocked: Tap to Allow";
+    if (hudText) hudText.textContent = "⚠️ Mic Blocked";
+    if (heroBtn) heroBtn.classList.remove("active");
+    if (hudBtn) hudBtn.classList.remove("active");
+    return;
+  }
+
+  if (isWakeWordEnabled) {
+    if (heroBtn) heroBtn.classList.add("active");
+    if (hudBtn) hudBtn.classList.add("active");
+    if (heroText) {
+      heroText.textContent = isRecognitionRunning ? "👂 'Hey Macrish': Listening" : "👂 'Hey Macrish': Ready";
+    }
+    if (hudText) {
+      hudText.textContent = isRecognitionRunning ? "👂 Wake Word: Listening" : "👂 Wake Word: ON";
+    }
+  } else {
+    if (heroBtn) heroBtn.classList.remove("active");
+    if (hudBtn) hudBtn.classList.remove("active");
+    if (heroText) heroText.textContent = "👂 'Hey Macrish': Paused";
+    if (hudText) hudText.textContent = "👂 Wake Word: OFF";
+  }
+}
+
+function updateVoiceUI(listening, customMessage) {
+  isListeningActive = !!listening;
+  const badge = document.getElementById("liveListeningBadge");
+  const micBtn = document.getElementById("hudVoiceMicBtn");
+  const masterBtn = document.getElementById("liveTalkMasterBtn");
+  const equalizer = document.getElementById("hudEqualizer");
+
+  if (micBtn) {
+    micBtn.classList.toggle("listening", isListeningActive);
+  }
+
+  if (masterBtn) {
+    masterBtn.classList.toggle("active", isLiveTalkMode);
+    const btnText = masterBtn.querySelector(".live-talk-btn-text");
+    if (btnText) {
+      btnText.textContent = isLiveTalkMode ? "🔴 Stop Live Talk" : "🎙️ Start Live Talk";
+    }
+  }
+
+  if (equalizer) {
+    equalizer.style.opacity = (isListeningActive || isSpeakingAloud) ? "1" : "0.3";
+  }
+
+  if (badge) {
+    if (customMessage) {
+      badge.style.display = "flex";
+      badge.innerHTML = `<span class="listening-wave-dot"></span><span>${customMessage}</span>`;
+    } else if (isLiveTalkMode && isListeningActive) {
+      badge.style.display = "flex";
+      badge.innerHTML = `<span class="listening-wave-dot"></span><span>🎙️ Live Talk Active: Speak now in বাংলা or English...</span>`;
+    } else if (isAwaitingCommand && isListeningActive) {
+      badge.style.display = "flex";
+      badge.innerHTML = `<span class="listening-wave-dot"></span><span>⚡ "Hey Macrish" active: Listening to your command...</span>`;
+    } else if (isListeningActive && !isWakeWordEnabled) {
+      badge.style.display = "flex";
+      badge.innerHTML = `<span class="listening-wave-dot"></span><span>🎙️ Listening...</span>`;
+    } else {
+      badge.style.display = "none";
+    }
+  }
+
+  updateWakeWordUIState();
+}
+
+async function startRecognitionSafely(requestPermissionIfNeeded = false) {
+  if (!SpeechRecognition) return;
+  if (typeof document !== "undefined" && document.hidden) return; // 0% CPU & battery when tab hidden!
+  if (isSpeakingAloud) return;
+  if (isRecognitionRunning) return;
+
+  if (requestPermissionIfNeeded && typeof navigator !== "undefined" && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(t => t.stop());
+      micPermissionGranted = true;
+    } catch (err) {
+      console.warn("Microphone access request denied:", err);
+      micPermissionGranted = false;
+      updateWakeWordUIState("permission_denied");
+      alert("Microphone access is required for voice activation. Please enable microphone permissions in your browser or iPhone Safari Settings.");
+      return;
+    }
+  }
+
+  try {
+    if (!recognitionInstance) {
+      setupSpeechRecognition();
+    }
+    if (recognitionInstance) {
+      recognitionInstance.lang = getVoiceLanguage();
+      recognitionInstance.start();
+    }
+  } catch (err) {
+    if (err.name !== "InvalidStateError") {
+      console.warn("SpeechRecognition start error:", err);
+    }
+  }
+}
+
+function stopRecognitionSafely() {
+  if (restartTimeout) {
+    clearTimeout(restartTimeout);
+    restartTimeout = null;
+  }
+  if (!recognitionInstance) return;
+  try {
+    recognitionInstance.stop();
+  } catch (e) {}
+  isRecognitionRunning = false;
+  updateVoiceUI(false);
+}
+
+function scheduleRecognitionRestart(delay = 300) {
+  if (restartTimeout) {
+    clearTimeout(restartTimeout);
+    restartTimeout = null;
+  }
+  if (typeof document !== "undefined" && document.hidden) return; // Zero drain when tab hidden!
+  if (isSpeakingAloud) return;
+  if (!isLiveTalkMode && !isWakeWordEnabled) return;
+
+  restartTimeout = setTimeout(() => {
+    startRecognitionSafely(false);
+  }, delay);
+}
+
+function setupSpeechRecognition() {
+  if (!SpeechRecognition) {
+    updateWakeWordUIState();
+    return;
+  }
+
+  try {
+    recognitionInstance = new SpeechRecognition();
+    recognitionInstance.continuous = false; // More reliable on Mobile Safari & Android
+    recognitionInstance.interimResults = false;
+    recognitionInstance.lang = getVoiceLanguage();
+
+    recognitionInstance.onstart = () => {
+      isRecognitionRunning = true;
+      micPermissionGranted = true;
+      updateVoiceUI(true);
+    };
+
+    recognitionInstance.onend = () => {
+      isRecognitionRunning = false;
+      updateVoiceUI(false);
+      scheduleRecognitionRestart();
+    };
+
+    recognitionInstance.onerror = (event) => {
+      isRecognitionRunning = false;
+      updateVoiceUI(false);
+      console.warn("Speech recognition error:", event.error);
+
+      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+        micPermissionGranted = false;
+        updateWakeWordUIState("permission_denied");
+      } else if (event.error !== "no-speech" && event.error !== "aborted") {
+        scheduleRecognitionRestart(1000);
+      } else {
+        scheduleRecognitionRestart(300);
+      }
+    };
+
+    recognitionInstance.onresult = async (event) => {
+      if (!event.results || event.results.length === 0) return;
+      const last = event.results.length - 1;
+      const transcript = (event.results[last][0]?.transcript || "").trim();
+      if (!transcript) return;
+
+      await handleSpeechTranscript(transcript);
+    };
+  } catch (e) {
+    console.error("Speech recognition initialization error:", e);
+  }
+}
+
+async function handleSpeechTranscript(transcript) {
+  console.log("Transcript received:", transcript);
+
+  // 1. If currently in continuous Live Talk mode:
+  if (isLiveTalkMode) {
+    triggerHaptic();
+    updateVoiceUI(true, `🎙️ Transcribing: "${transcript}"`);
+    await processConversationalInput(transcript);
+    return;
+  }
+
+  // 2. If already activated by Wake Word and waiting for command:
+  if (isAwaitingCommand) {
+    isAwaitingCommand = false;
+    triggerHaptic();
+    updateVoiceUI(true, `⚡ Processing: "${transcript}"`);
+    await processConversationalInput(transcript);
+    return;
+  }
+
+  // 3. Check for Wake Word detection ("Hey Macrish" / "হে ম্যাকরিশ"):
+  if (isWakeWordDetected(transcript)) {
+    triggerHaptic();
+    openHud("chat");
+
+    const command = stripWakeWord(transcript);
+    if (command && command.length > 2) {
+      // User said wake word AND command together!
+      updateVoiceUI(true, `⚡ Macrish Activated: "${command}"`);
+      await processConversationalInput(command);
+    } else {
+      // User only said wake word!
+      isAwaitingCommand = true;
+      updateVoiceUI(true, `⚡ "Hey Macrish" Active: Listening for command...`);
+      const isBn = getVoiceLanguage().startsWith("bn");
+      const wakeGreeting = isBn
+        ? `জ্বী ${profile.name} স্যার, বলুন? আমি শুনছি।`
+        : `Yes ${profile.name} sir, I'm listening.`;
+      
+      chatLog.push({ role: "macrish", text: wakeGreeting, timestamp: Date.now() });
+      saveChatLog(chatLog);
+      renderHudChat();
+      speakMacrishResponse(wakeGreeting);
+    }
+    return;
+  }
+
+  // 4. If HUD is currently open and chat input was clicked:
+  const hudModal = document.getElementById("macrishHudModal");
+  if (hudModal && !hudModal.hidden) {
+    const hudInput = document.getElementById("hudChatInput");
+    if (hudInput) {
+      hudInput.value = transcript;
+    }
+    triggerHaptic();
+    await processConversationalInput(transcript);
+  }
+}
+
 function speakMacrishResponse(text) {
   if (!isVoiceSpeakbackEnabled() || typeof window === "undefined" || !window.speechSynthesis) return;
 
   try {
+    stopRecognitionSafely();
+    isSpeakingAloud = true;
     window.speechSynthesis.cancel();
 
     // Clean text of markdown/symbols for clean pronunciation
@@ -458,7 +771,11 @@ function speakMacrishResponse(text) {
       .replace(/[•-]/g, "")
       .trim();
 
-    if (!clean) return;
+    if (!clean) {
+      isSpeakingAloud = false;
+      scheduleRecognitionRestart(300);
+      return;
+    }
 
     const utterance = new SpeechSynthesisUtterance(clean);
     const isBengali = /[\u0980-\u09FF]/.test(clean);
@@ -476,31 +793,30 @@ function speakMacrishResponse(text) {
     const stopBtn = document.getElementById("stopVoiceSpeechBtn");
 
     utterance.onstart = () => {
+      isSpeakingAloud = true;
       if (sunSphere) sunSphere.classList.add("speaking");
       if (stopBtn) stopBtn.style.display = "inline-flex";
     };
 
     utterance.onend = () => {
+      isSpeakingAloud = false;
       if (sunSphere) sunSphere.classList.remove("speaking");
       if (stopBtn) stopBtn.style.display = "none";
-      // If Live Talk mode is active, restart listening for user response!
-      if (isLiveTalkMode && recognitionInstance && !isListeningActive) {
-        setTimeout(() => {
-          if (isLiveTalkMode && !isListeningActive) {
-            try { recognitionInstance.start(); } catch(e) {}
-          }
-        }, 350);
-      }
+      scheduleRecognitionRestart(400);
     };
 
     utterance.onerror = () => {
+      isSpeakingAloud = false;
       if (sunSphere) sunSphere.classList.remove("speaking");
       if (stopBtn) stopBtn.style.display = "none";
+      scheduleRecognitionRestart(400);
     };
 
     window.speechSynthesis.speak(utterance);
   } catch(e) {
+    isSpeakingAloud = false;
     console.warn("Speech synthesis error:", e);
+    scheduleRecognitionRestart(400);
   }
 }
 
@@ -1194,7 +1510,30 @@ function setupEvents() {
   const headerBtn = document.getElementById("headerMacrishBtn");
   if (headerBtn) headerBtn.addEventListener("click", () => openHud("chat"));
   const heroTalk = document.getElementById("heroTalkBtn");
-  if (heroTalk) heroTalk.addEventListener("click", () => openHud("chat"));
+  if (heroTalk) {
+    heroTalk.addEventListener("click", async () => {
+      openHud("chat");
+      if (SpeechRecognition && !micPermissionGranted) {
+        await startRecognitionSafely(true);
+      }
+    });
+  }
+  const heroWakeWordBtn = document.getElementById("heroWakeWordBtn");
+  if (heroWakeWordBtn) {
+    heroWakeWordBtn.addEventListener("click", async () => {
+      if (!SpeechRecognition) {
+        alert("Voice recognition is not supported in this browser. On iPhone, please use Safari; on Desktop/Android, use Chrome.");
+        return;
+      }
+      triggerHaptic();
+      if (!isWakeWordEnabled) {
+        setWakeWordActive(true);
+        await startRecognitionSafely(true);
+      } else {
+        setWakeWordActive(false);
+      }
+    });
+  }
   const heroAlarm = document.getElementById("heroAlarmBtn");
   if (heroAlarm) heroAlarm.addEventListener("click", () => openHud("alarm"));
   const heroSun = document.getElementById("heroSunTrigger");
@@ -1387,47 +1726,78 @@ function setupEvents() {
     });
   }
 
+  const hudWakeWordToggleBtn = document.getElementById("hudWakeWordToggleBtn");
+  if (hudWakeWordToggleBtn) {
+    hudWakeWordToggleBtn.addEventListener("click", async () => {
+      if (!SpeechRecognition) {
+        alert("Voice recognition is not supported in this browser.");
+        return;
+      }
+      triggerHaptic();
+      const nextState = !isWakeWordEnabled;
+      setWakeWordActive(nextState);
+      if (nextState) {
+        await startRecognitionSafely(true);
+      }
+    });
+  }
+
   if (liveTalkMasterBtn) {
-    liveTalkMasterBtn.addEventListener("click", () => {
+    liveTalkMasterBtn.addEventListener("click", async () => {
       if (!SpeechRecognition) {
         alert("Live Talk voice recognition is not supported in this browser. Please use Safari on iPhone or Chrome on Desktop/Android.");
         return;
       }
-      isLiveTalkMode = !isLiveTalkMode;
       triggerHaptic();
+      isLiveTalkMode = !isLiveTalkMode;
 
       if (isLiveTalkMode) {
-        liveTalkMasterBtn.classList.add("active");
-        try {
-          recognitionInstance.start();
-        } catch(e) {
-          console.warn(e);
-        }
+        await startRecognitionSafely(true);
+        const isBn = getVoiceLanguage().startsWith("bn");
+        const greeting = isBn ? "লাইভ টক সক্রিয় হয়েছে স্যার। বলুন, আমি শুনছি।" : "Live Talk active sir. Tell me anything.";
+        speakMacrishResponse(greeting);
       } else {
-        liveTalkMasterBtn.classList.remove("active");
-        try {
-          recognitionInstance.stop();
-        } catch(e) {}
         if (window.speechSynthesis) window.speechSynthesis.cancel();
+        isSpeakingAloud = false;
         updateVoiceUI(false);
+        if (isWakeWordEnabled) {
+          scheduleRecognitionRestart(300);
+        } else {
+          stopRecognitionSafely();
+        }
       }
     });
   }
 
   if (hudVoiceMicBtn) {
-    hudVoiceMicBtn.addEventListener("click", () => {
+    hudVoiceMicBtn.addEventListener("click", async () => {
       if (!SpeechRecognition) {
         alert("Voice recognition is not supported in this browser. Please use Safari on iPhone or Chrome on Desktop/Android.");
         return;
       }
       triggerHaptic();
-      if (isListeningActive) {
-        try { recognitionInstance.stop(); } catch(e) {}
+      if (isRecognitionRunning) {
+        stopRecognitionSafely();
       } else {
-        try { recognitionInstance.start(); } catch(e) { console.warn(e); }
+        await startRecognitionSafely(true);
       }
     });
   }
+
+  // Zero Background Drain: Auto-pause microphone and speech when tab is hidden!
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      stopRecognitionSafely();
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+        isSpeakingAloud = false;
+      }
+    } else {
+      if (isWakeWordEnabled || isLiveTalkMode) {
+        scheduleRecognitionRestart(400);
+      }
+    }
+  });
 
   // HUD Chat Submission
   document.getElementById("hudChatForm").addEventListener("submit", async (e) => {
@@ -1650,6 +2020,11 @@ if ("serviceWorker" in navigator) {
 setupEvents();
 renderAll();
 handleOnOpenGreeting();
+
+// Start Wake Word listener if enabled and foregrounded
+if (isWakeWordEnabled) {
+  scheduleRecognitionRestart(600);
+}
 
 // Active-Session Ticker (Zero Background Drain: only triggers when tab is open!)
 setInterval(() => {

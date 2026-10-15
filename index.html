@@ -89,6 +89,10 @@
           </div>
           <div class="hero-quick-actions">
             <button class="hero-action-btn primary" id="heroTalkBtn" type="button">💬 Speak with Macrish</button>
+            <button class="hero-action-btn wake-word-toggle-btn active" id="heroWakeWordBtn" type="button" title="Toggle 'Hey Macrish' voice activation">
+              <span class="wake-radar-dot"></span>
+              <span id="heroWakeWordText">👂 "Hey Macrish": Ready</span>
+            </button>
             <button class="hero-action-btn" id="heroAlarmBtn" type="button">⏰ Wake-Up Alarm</button>
           </div>
         </div>
@@ -364,6 +368,10 @@
                 <button type="button" class="live-talk-toggle-btn" id="liveTalkMasterBtn" title="Start real-time voice call with Macrish">
                   <span class="live-talk-dot"></span>
                   <span class="live-talk-btn-text">🎙️ Start Live Talk</span>
+                </button>
+                <button type="button" class="wake-hud-toggle-btn active" id="hudWakeWordToggleBtn" title="Toggle 'Hey Macrish' wake word">
+                  <span class="wake-hud-dot"></span>
+                  <span id="hudWakeWordStatusText">👂 Wake Word: Ready</span>
                 </button>
                 <select id="voiceLanguageSelect" class="voice-lang-select" title="Voice Recognition Language">
                   <option value="bn-BD">🇧🇩 বাংলা (Bangla)</option>

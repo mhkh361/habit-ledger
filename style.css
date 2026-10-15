@@ -462,6 +462,53 @@ body {
   box-shadow: 0 6px 18px var(--sun-corona-glow);
 }
 
+.hero-action-btn.wake-word-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface-raised);
+  border: 1.5px solid var(--border-subtle);
+  color: var(--text-main);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.hero-action-btn.wake-word-toggle-btn:hover {
+  border-color: var(--sun-gold);
+  background: #FEF3C7;
+  transform: translateY(-1px);
+}
+
+.hero-action-btn.wake-word-toggle-btn.active {
+  background: #FFFBEB;
+  border-color: var(--sun-amber);
+  color: #92400E;
+  box-shadow: 0 2px 12px rgba(245, 158, 11, 0.22);
+}
+
+.wake-radar-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #9CA3AF;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.hero-action-btn.wake-word-toggle-btn.active .wake-radar-dot {
+  background: #F59E0B;
+  animation: radarPulse 1.6s infinite ease-out;
+}
+
+@keyframes radarPulse {
+  0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); }
+  70% { box-shadow: 0 0 0 8px rgba(245, 158, 11, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+}
+
 /* Highlighted Telemetry Badges with Generous Room */
 .hero-telemetry-grid {
   display: grid;
@@ -1557,6 +1604,47 @@ body {
 .live-talk-toggle-btn.active .live-talk-dot {
   background: #FFFFFF;
   animation: pulse-dot 0.8s infinite alternate;
+}
+
+.wake-hud-toggle-btn {
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  border-radius: var(--radius-pill);
+  padding: 5px 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.16s ease;
+}
+
+.wake-hud-toggle-btn:hover {
+  background: #FEF3C7;
+  color: #92400E;
+  border-color: var(--sun-gold);
+}
+
+.wake-hud-toggle-btn.active {
+  background: #FEF3C7;
+  border-color: var(--sun-gold);
+  color: #92400E;
+}
+
+.wake-hud-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #9CA3AF;
+  display: inline-block;
+}
+
+.wake-hud-toggle-btn.active .wake-hud-dot {
+  background: #F59E0B;
+  animation: radarPulse 1.6s infinite ease-out;
 }
 
 .voice-lang-select {
