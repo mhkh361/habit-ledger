@@ -20,7 +20,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,600&display=swap" rel="stylesheet">
   
-  <link rel="stylesheet" href="style.css?v=9">
+  <link rel="stylesheet" href="style.css?v=10">
 </head>
 <body>
 
@@ -88,10 +88,10 @@
             <p class="hero-entity-sub">Cognitive AI Routine Architect & Neural Assistant calibrated to your rhythm.</p>
           </div>
           <div class="hero-quick-actions">
-            <button class="hero-action-btn primary" id="heroTalkBtn" type="button">💬 Speak with Macrish</button>
+            <button class="hero-action-btn primary" id="heroTalkBtn" type="button">🎙️ কথা বলুন (Live Voice Talk)</button>
             <button class="hero-action-btn wake-word-toggle-btn active" id="heroWakeWordBtn" type="button" title="Toggle 'Hey Macrish' voice activation">
               <span class="wake-radar-dot"></span>
-              <span id="heroWakeWordText">👂 "Hey Macrish": Ready</span>
+              <span id="heroWakeWordText">👂 "Hey Macrish": সক্রিয় (Active)</span>
             </button>
             <button class="hero-action-btn" id="heroAlarmBtn" type="button">⏰ Wake-Up Alarm</button>
           </div>
@@ -132,6 +132,22 @@
         </div>
       </section>
 
+      <!-- ==================== GLOBAL AI AGENT QUICK COMMAND BAR ==================== -->
+      <section class="global-agent-bar" id="globalAgentBar">
+        <form class="agent-command-form" id="globalCommandForm">
+          <div class="agent-input-pill">
+            <span class="agent-spark-icon" title="Macrish AI Agent">⚡</span>
+            <input type="text" id="globalCommandInput" placeholder="Command Macrish: e.g. 'আমার হ্যাবিটগুলো দিয়ে আজকের রুটিন সাজাও' or 'বিকেল ৫টায় জিম যোগ করো'..." autocomplete="off">
+            <button type="button" class="agent-mic-btn" id="globalCommandMicBtn" title="Speak command (কণ্ঠ দিয়ে বলুন)">🎙️ মুখে বলুন</button>
+          </div>
+          <button type="submit" class="agent-execute-btn">Execute ↵</button>
+          <button type="button" class="agent-sync-btn" id="globalQuickSyncBtn" title="Auto-convert active habits into today's timetable">
+            🔄 Sync Habits to Tasks
+          </button>
+        </form>
+        <div class="agent-toast-banner" id="agentToastBanner" style="display:none;"></div>
+      </section>
+
       <!-- Navigation Toolbar -->
       <nav class="action-toolbar">
         <div class="toolbar-left">
@@ -154,7 +170,12 @@
             <h2 class="section-title">Daily Action Blocks</h2>
             <p class="section-desc">Organize time slots with automated completion check-ins.</p>
           </div>
-          <span class="slot-count-badge" id="scheduleCountBadge">0 Blocks</span>
+          <div class="lead-actions">
+            <button type="button" class="sync-habits-btn" id="scheduleSyncHabitsBtn" title="Auto-convert habits to daily timetable">
+              🔄 Sync Habits
+            </button>
+            <span class="slot-count-badge" id="scheduleCountBadge">0 Blocks</span>
+          </div>
         </div>
 
         <div class="timeline-list" id="scheduleList">
@@ -182,12 +203,17 @@
       <section class="view-panel" id="habitsView" hidden>
         <div class="section-lead">
           <div>
-            <h2 class="section-title">Habits Ledger</h2>
-            <p class="section-desc">Permanent paper-ink records. Tap the 7-day dots to backfill anytime.</p>
+            <h2 class="section-title">Habits & Self-Improvement Blueprint</h2>
+            <p class="section-desc">Permanent habit foundations. Click 'Sync to Tasks' to schedule them into today's timetable.</p>
           </div>
-          <div class="stat-badges">
-            <span class="stat-pill"><strong id="statActive">0</strong> kept today</span>
-            <span class="stat-pill"><strong id="statBest">0</strong> best streak</span>
+          <div class="lead-actions">
+            <button type="button" class="sync-habits-btn" id="habitsSyncToScheduleBtn" title="Sync all active habits to today's daily timetable">
+              🔄 Sync to Today's Tasks
+            </button>
+            <div class="stat-badges">
+              <span class="stat-pill"><strong id="statActive">0</strong> kept today</span>
+              <span class="stat-pill"><strong id="statBest">0</strong> best streak</span>
+            </div>
           </div>
         </div>
 
@@ -274,6 +300,11 @@
 
   <!-- ==================== FLOATING SOLAR ORB SUMMONER ==================== -->
   <aside class="floating-solar-dock" id="floatingSolarDock">
+    <button class="floating-live-talk-btn" id="floatingLiveTalkBtn" type="button" aria-label="Start Live Talk with Macrish" title="লাইভ কথা বলুন (Live Voice Talk)">
+      <span class="live-mic-pulse"></span>
+      <span class="live-mic-icon">🎙️</span>
+      <span class="live-mic-label">কথা বলুন</span>
+    </button>
     <button class="floating-solar-btn" id="floatingArcBtn" type="button" aria-label="Summon Macrish Solar Core">
       <div class="solar-orb-core">
         <div class="solar-corona-ring ring-1"></div>
@@ -293,7 +324,7 @@
       <div class="hud-telemetry-bar">
         <div class="telemetry-left">
           <span class="hud-dot-sun"></span>
-          <span class="hud-protocol-tag">MACRISH // SOLAR CORE v5.0</span>
+          <span class="hud-protocol-tag">MACRISH // SOLAR CORE v10.0 (Gemini 2.5)</span>
           <span class="hud-status-text">SYS: ACTIVE</span>
         </div>
         <div class="telemetry-right">
@@ -471,25 +502,25 @@
         </div>
       </div>
 
-      <!-- PANEL 4: GEMINI 1.5 & 2.5 MODEL ENGINE SETTINGS -->
+      <!-- PANEL 4: GEMINI 2.5 DYNAMIC MODEL ENGINE SETTINGS -->
       <div class="hud-panel" id="hudPanelApi" hidden>
         <div class="api-settings-card">
           <div class="api-badge-row">
-            <span class="api-model-pill" id="activeModelBadge">⚡ GEMINI 1.5 FLASH</span>
-            <span class="api-model-pill" style="background:#EDE9FE; color:#5B21B6;">🚀 GEMINI 2.5 READY</span>
+            <span class="api-model-pill" id="activeModelBadge">🚀 GEMINI 2.5 FLASH</span>
+            <span class="api-model-pill" style="background:#EDE9FE; color:#5B21B6;">🧠 GEMINI 2.5 PRO</span>
             <span class="api-free-pill">100% FREE TIER</span>
           </div>
-          <h4 class="hud-section-header">Client-Side Gemini AI Intelligence</h4>
+          <h4 class="hud-section-header">Client-Side Gemini 2.5 AI Engine</h4>
           <p class="hud-card-desc">
-            Macrish supports Google's <strong>Gemini 1.5 Flash</strong> and next-gen <strong>Gemini 2.5 / 2.0 Flash</strong> models. Select your desired engine below and paste your Google AI Studio API key. Stored strictly in your browser's local memory.
+            Macrish supports Google's next-gen <strong>Gemini 2.5 Flash</strong> and <strong>2.5 Pro</strong> models with dynamic discovery. Paste your key from Google AI Studio — all supported models are automatically detected and saved in your browser's localStorage.
           </p>
 
           <div class="api-model-select-wrap">
             <label class="guide-title" for="geminiModelSelect">Active AI Model Engine:</label>
             <select id="geminiModelSelect" class="gemini-model-select" title="Choose Gemini Model Engine">
-              <option value="gemini-1.5-flash" selected>⚡ Gemini 1.5 Flash (Ultra Fast &amp; Balanced)</option>
-              <option value="gemini-2.0-flash">🚀 Gemini 2.5 / 2.0 Flash (Next-Gen Intelligence &amp; Deep Bangla)</option>
-              <option value="gemini-1.5-pro">🧠 Gemini 1.5 Pro (In-Depth Analytical Cognitive Plans)</option>
+              <option value="gemini-2.5-flash" selected>🚀 Gemini 2.5 Flash (Ultra Fast &amp; Deep Bangla)</option>
+              <option value="gemini-2.5-pro">🧠 Gemini 2.5 Pro (State-of-the-Art Deep Reasoning)</option>
+              <option value="gemini-2.0-flash">⚡ Gemini 2.0 Flash (Stable High Speed)</option>
             </select>
           </div>
 
@@ -640,6 +671,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=9"></script>
+  <script src="app.js?v=10"></script>
 </body>
 </html>

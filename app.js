@@ -14,6 +14,7 @@ const KEYS = {
   LAST_ACTIVE: "macrish.lastActiveTimestamp",
   GEMINI_KEY: "macrish.geminiApiKey",
   GEMINI_MODEL: "macrish.geminiModel",
+  GEMINI_MODELS_LIST: "macrish.availableModels",
   VOICE_SPEAKBACK: "macrish.voiceSpeakback",
   VOICE_LANG: "macrish.voiceLanguage",
   WAKE_LOCK: "macrish.wakeLockSetting",
@@ -329,7 +330,7 @@ function parseTimeFromText(text) {
   return null;
 }
 
-// ---------- Google Gemini Intelligence Client (1.5 & 2.5/2.0) ----------
+// ---------- Google Gemini 2.5 Universal Intelligence Client & Agentic Engine ----------
 function getGeminiApiKey() {
   try {
     return (localStorage.getItem(KEYS.GEMINI_KEY) || "").trim();
@@ -353,15 +354,15 @@ function setGeminiApiKey(key) {
 
 function getGeminiModel() {
   try {
-    const val = localStorage.getItem(KEYS.GEMINI_MODEL) || "gemini-1.5-flash";
+    const val = localStorage.getItem(KEYS.GEMINI_MODEL) || "gemini-2.5-flash";
     return val.trim().replace(/^models\//, "");
   } catch (e) {
-    return (window.__mem_gemini_model || "gemini-1.5-flash").replace(/^models\//, "");
+    return (window.__mem_gemini_model || "gemini-2.5-flash").replace(/^models\//, "");
   }
 }
 
 function setGeminiModel(model) {
-  const clean = (model || "gemini-1.5-flash").trim().replace(/^models\//, "");
+  const clean = (model || "gemini-2.5-flash").trim().replace(/^models\//, "");
   try {
     localStorage.setItem(KEYS.GEMINI_MODEL, clean);
   } catch (e) {
@@ -369,55 +370,292 @@ function setGeminiModel(model) {
   }
 }
 
-async function verifyGeminiApiKey(rawApiKey, selectedModel = "gemini-1.5-flash") {
-  // 1. Sanitize key: trim whitespace & newlines from mobile Safari clipboard
-  const cleanKey = (rawApiKey || "").trim();
-  if (!cleanKey) {
-    throw new Error("অনুগ্রহ করে একটি সঠিক API Key প্রদান করুন।");
+function getStoredAvailableModels() {
+  try {
+    const raw = localStorage.getItem(KEYS.GEMINI_MODELS_LIST);
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash"];
+}
+
+function setStoredAvailableModels(list) {
+  try {
+    localStorage.setItem(KEYS.GEMINI_MODELS_LIST, JSON.stringify(list));
+  } catch(e) {}
+}
+
+function showAgentToast(msg, duration = 3500) {
+  const toast = document.getElementById("agentToastBanner");
+  if (!toast) return;
+  toast.textContent = msg;
+  toast.style.display = "block";
+  clearTimeout(window.__toastTimeout);
+  window.__toastTimeout = setTimeout(() => {
+    toast.style.display = "none";
+  }, duration);
+}
+
+function syncHabitsToSchedule(silent = false) {
+  const todayTasks = getTodayTasks();
+  let addedCount = 0;
+  let startHour = 6;
+
+  habits.forEach(habit => {
+    const exists = todayTasks.some(t => t.title.toLowerCase().includes(habit.name.toLowerCase()));
+    if (!exists) {
+      while (startHour < 22) {
+        const sTime = `${String(startHour).padStart(2, "0")}:00`;
+        const eTime = `${String(startHour + 1).padStart(2, "0")}:00`;
+        const overlap = todayTasks.some(t => t.startTime === sTime);
+        if (!overlap) {
+          addScheduleTask(habit.name + " (Habit Focus)", sTime, eTime);
+          addedCount++;
+          startHour += 2;
+          break;
+        }
+        startHour++;
+      }
+    }
+  });
+
+  if (addedCount > 0) {
+    showAgentToast(`🔄 ${addedCount}টি হ্যাবিট আজকের ডেইলি টাইমটেবিলে যুক্ত করা হয়েছে!`);
+    renderAll();
+  } else if (!silent) {
+    showAgentToast("সবগুলো হ্যাবিট ইতোমধ্যে আজকের টাইমটেবিলে সাজানো আছে।");
+  }
+}
+
+function extractJsonFromText(text) {
+  if (!text) return null;
+  const clean = text.trim();
+  try {
+    return JSON.parse(clean);
+  } catch(e) {}
+
+  const codeBlockMatch = clean.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (codeBlockMatch) {
+    try {
+      return JSON.parse(codeBlockMatch[1].trim());
+    } catch(e) {}
   }
 
-  // 2. Standard Verification via Google ListModels Endpoint (Safe, no token burn, no prompt filters)
-  const checkUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(cleanKey)}`;
+  const firstBrace = clean.indexOf("{");
+  const lastBrace = clean.lastIndexOf("}");
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    try {
+      return JSON.parse(clean.substring(firstBrace, lastBrace + 1));
+    } catch(e) {}
+  }
+
+  return null;
+}
+
+function executeAgentActions(actions) {
+  if (!actions || typeof actions !== "object") return null;
+
+  const summary = [];
+
+  // Add Habits
+  if (Array.isArray(actions.addHabits) && actions.addHabits.length > 0) {
+    actions.addHabits.forEach(hName => {
+      if (hName && !habits.some(h => h.name.toLowerCase() === hName.toLowerCase())) {
+        habits.push({ id: generateId(), name: hName.trim(), log: {} });
+        summary.push(`+ অভ্যাস: ${hName}`);
+      }
+    });
+    saveHabits(habits);
+  }
+
+  // Add Tasks (supports addTasks or addDailyTasks)
+  const tasksToAdd = Array.isArray(actions.addTasks) ? actions.addTasks : (Array.isArray(actions.addDailyTasks) ? actions.addDailyTasks : []);
+  if (tasksToAdd.length > 0) {
+    tasksToAdd.forEach(task => {
+      if (task && task.title) {
+        let sTime = task.startTime;
+        let eTime = task.endTime;
+        if (!sTime && task.time) {
+          sTime = parseTimeFromText(task.time) || "09:00";
+          const [h, m] = sTime.split(":").map(Number);
+          eTime = `${String((h + 1) % 24).padStart(2, "0")}:${String(m || 0).padStart(2, "0")}`;
+        }
+        sTime = sTime || "09:00";
+        eTime = eTime || "10:00";
+        schedule.push({
+          id: generateId(),
+          title: task.title.trim(),
+          date: todayStr(),
+          startTime: sTime,
+          endTime: eTime,
+          completed: false,
+          prompted: false
+        });
+        summary.push(`+ টাস্ক: ${task.title} (${formatTime12h(sTime)})`);
+      }
+    });
+    saveSchedule(schedule);
+  }
+
+  // Complete Tasks (supports completeTaskTitles or markCompleted)
+  const tasksToComplete = Array.isArray(actions.completeTaskTitles) ? actions.completeTaskTitles : (Array.isArray(actions.markCompleted) ? actions.markCompleted : []);
+  if (tasksToComplete.length > 0) {
+    tasksToComplete.forEach(title => {
+      const t = schedule.find(s => s.date === todayStr() && s.title.toLowerCase().includes(String(title).toLowerCase()));
+      if (t) {
+        t.completed = true;
+        summary.push(`✓ সম্পন্ন: ${t.title}`);
+      }
+    });
+    saveSchedule(schedule);
+  }
+
+  // Remove Tasks
+  if (Array.isArray(actions.removeTaskTitles) && actions.removeTaskTitles.length > 0) {
+    actions.removeTaskTitles.forEach(title => {
+      schedule = schedule.filter(s => !(s.date === todayStr() && s.title.toLowerCase().includes(title.toLowerCase())));
+      summary.push(`- ডিলিট: ${title}`);
+    });
+    saveSchedule(schedule);
+  }
+
+  // Add Alarms
+  if (Array.isArray(actions.addAlarms) && actions.addAlarms.length > 0) {
+    actions.addAlarms.forEach(al => {
+      if (al && al.time) {
+        alarms.push({
+          id: generateId(),
+          time: al.time,
+          label: al.label || "Morning Protocol",
+          active: true
+        });
+        summary.push(`⏰ অ্যালার্ম: ${formatTime12h(al.time)}`);
+      }
+    });
+    saveAlarms(alarms);
+  }
+
+  if (summary.length > 0) {
+    renderAll();
+    showAgentToast(`⚡ Macrish Agent: ${summary.join(" • ")}`);
+  }
+
+  return summary;
+}
+
+async function verifyAndAutoConfigureGemini(rawKey) {
+  const apiKey = (rawKey || "").trim();
+
+  // 1. Validate key format (Google AI Studio keys start with AIza)
+  if (!apiKey.startsWith("AIza")) {
+    throw new Error("ভুল ফরম্যাট! Google AI Studio-র আসল API Key সবসময় 'AIzaSy...' দিয়ে শুরু হয়। (OAuth বা Access Token গ্রহণযোগ্য নয়)");
+  }
+
+  // 2. Fetch supported models directly from Google ListModels endpoint
+  const checkUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`;
   const response = await fetch(checkUrl);
   const data = await response.json().catch(() => ({}));
 
-  if (!response.ok) {
+  if (!response.ok || !data.models) {
     const rawMsg = data.error?.message || `HTTP ${response.status}`;
     if (response.status === 400 || rawMsg.includes("API_KEY_INVALID") || rawMsg.includes("API key not valid")) {
-      throw new Error("ভুল API Key! অনুগ্রহ করে Google AI Studio থেকে সঠিক কি কপি করুন।");
+      throw new Error("API Key-টি সঠিক নয়। অনুগ্রহ করে aistudio.google.com/app/apikey থেকে সঠিক কি কপি করুন।");
     } else if (response.status === 403) {
       throw new Error("API Key অ্যাক্সেস পারমিশন রেস্ট্রিক্টেড বা ব্লকড।");
     }
     throw new Error(`Google AI Error: ${rawMsg}`);
   }
 
-  // 3. Normalize Model Name (Strip any duplicate 'models/' prefix)
-  const cleanModelName = (selectedModel || "gemini-1.5-flash").trim().replace(/^models\//, "");
+  // 3. Filter models that support generateContent
+  const supportedModels = data.models
+    .filter(m => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes("generateContent"))
+    .map(m => (m.name || "").replace(/^models\//, ""))
+    .filter(Boolean);
 
-  // 4. Safe storage inside try/catch
-  setGeminiApiKey(cleanKey);
-  setGeminiModel(cleanModelName);
+  if (supportedModels.length === 0) {
+    throw new Error("আপনার API Key-তে কোনো টেক্সট জেনারেশন মডেল সাপোর্ট পাওয়া যায়নি।");
+  }
+
+  // 4. Preferred order: gemini-2.5-flash, gemini-2.5-pro, gemini-2.0-flash, etc.
+  const preferredOrder = [
+    "gemini-2.5-flash",
+    "gemini-2.5-pro",
+    "gemini-2.0-flash",
+    "gemini-flash-latest",
+    "gemini-pro-latest",
+    "gemini-1.5-flash",
+    "gemini-1.5-pro"
+  ];
+
+  let bestModel = preferredOrder.find(m => supportedModels.includes(m)) || supportedModels[0];
+
+  setGeminiApiKey(apiKey);
+  setGeminiModel(bestModel);
+  setStoredAvailableModels(supportedModels);
 
   return {
     ok: true,
-    chosenModel: cleanModelName,
-    availableModels: data.models || []
+    success: true,
+    chosenModel: bestModel,
+    activeModel: bestModel,
+    availableModels: supportedModels,
+    message: `সফলভাবে ভেরিফাইড! অ্যাক্টিভ মডেল: ${bestModel}`
   };
 }
+
+const verifyGeminiApiKey = verifyAndAutoConfigureGemini;
 
 async function queryGeminiFlash(userInput, apiKey) {
   const cleanKey = (apiKey || "").trim();
   if (!cleanKey) throw new Error("API Key অনুপস্থিত");
 
-  // Normalize model name (guaranteed no duplicate 'models/' prefix)
-  let targetModel = getGeminiModel().trim().replace(/^models\//, "");
+  const availableModels = getStoredAvailableModels();
+  let currentChosen = getGeminiModel().trim().replace(/^models\//, "");
+  const candidateModels = [
+    currentChosen,
+    ...availableModels.filter(m => m !== currentChosen),
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+    "gemini-2.5-pro"
+  ];
+  const uniqueCandidates = [...new Set(candidateModels)];
 
-  const systemPrompt = `You are Macrish v5.0, an intelligent, respectful, and motivating personal AI companion (inspired by Iron Man's J.A.R.V.I.S.) for Fahad sir inside his Habit Ledger app.
-Core Instructions:
-- Keep answers direct, friendly, and actionable (2-4 sentences max unless the user specifically asks for a detailed plan or explanation).
-- If the user writes in Bengali or Banglish, answer in warm, natural Bengali (বাংলা).
-- If the user writes in English, answer in crisp English.
-- Emphasize daily discipline, consistency, time management, and health.`;
+  const systemPrompt = `You are Macrish, the autonomous Self-Improvement & Daily Execution AI Agent for Fahad sir in Habit Ledger.
+You have direct read/write control over the user's frontend state in localStorage:
+CURRENT STATE:
+- User Profile: ${JSON.stringify(profile)}
+- Habits Blueprint: ${JSON.stringify(habits.map(h => ({ id: h.id, name: h.name, streak: currentStreak(h) })))}
+- Today's Scheduled Tasks (${todayStr()}): ${JSON.stringify(getTodayTasks().map(t => ({ id: t.id, title: t.title, time: t.startTime + " - " + t.endTime, completed: t.completed })))}
+- Active Alarms: ${JSON.stringify(alarms.map(a => ({ id: a.id, time: a.time, label: a.label, active: a.active })))}
+
+CAPABILITIES:
+Whenever the user asks you to:
+1. Organize or generate today's routine/schedule based on habits
+2. Add new habits, modify habits, or remove habits
+3. Add daily timetable tasks, mark tasks done, or remove tasks
+4. Set or remove wake-up alarms
+You MUST respond with a JSON object in this exact format:
+{
+  "reply": "Warm, concise, motivating response in natural Bengali (বাংলা) or English (match user's language). 2-3 sentences max.",
+  "actions": {
+    "addHabits": ["Habit name to add to ledger"],
+    "addTasks": [
+      { "title": "Specific Task Name", "startTime": "06:00", "endTime": "07:30" }
+    ],
+    "completeTaskTitles": ["Task title to mark as completed"],
+    "removeTaskTitles": ["Task title to remove"],
+    "addAlarms": [
+      { "time": "05:00", "label": "Morning Protocol" }
+    ]
+  }
+}
+
+If the user is simply asking a question, seeking advice, or having a conversation without requesting modifications:
+{
+  "reply": "Your helpful, crisp answer in natural Bengali (or English).",
+  "actions": null
+}
+
+IMPORTANT: Always output valid JSON only. Do not wrap in extra prose.`;
 
   const payload = {
     contents: [
@@ -428,39 +666,61 @@ Core Instructions:
       }
     ],
     generationConfig: {
-      temperature: 0.7,
-      maxOutputTokens: 350
+      temperature: 0.6,
+      maxOutputTokens: 600
     }
   };
 
-  let url = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(cleanKey)}`;
-  let response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  });
+  let lastError = null;
 
-  // Graceful fallback to gemini-1.5-flash if selected model returns 404
-  if (response.status === 404 && targetModel !== "gemini-1.5-flash") {
-    console.warn(`${targetModel} not found on endpoint, falling back to gemini-1.5-flash`);
-    targetModel = "gemini-1.5-flash";
-    url = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(cleanKey)}`;
-    response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
+  for (const modelName of uniqueCandidates) {
+    const cleanModel = modelName.trim().replace(/^models\//, "");
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}:generateContent?key=${encodeURIComponent(cleanKey)}`;
+
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.status === 404 || response.status === 400) {
+        const errJson = await response.json().catch(() => ({}));
+        console.warn(`Model ${cleanModel} failed (${response.status}):`, errJson);
+        lastError = new Error(errJson.error?.message || `HTTP ${response.status}`);
+        continue; // Try next fallback model
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || `HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!rawText) throw new Error("No response text from Gemini API");
+
+      // Auto-save the working model
+      if (cleanModel !== currentChosen) {
+        setGeminiModel(cleanModel);
+      }
+
+      // Parse structured JSON or text
+      const parsedJson = extractJsonFromText(rawText);
+      if (parsedJson && parsedJson.actions) {
+        executeAgentActions(parsedJson.actions);
+        return parsedJson.reply || "কাজ সম্পন্ন হয়েছে স্যার।";
+      } else if (parsedJson && parsedJson.reply) {
+        return parsedJson.reply;
+      }
+      return rawText.trim();
+    } catch (err) {
+      console.warn(`Attempt with ${cleanModel} threw:`, err);
+      lastError = err;
+    }
   }
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error?.message || `HTTP ${response.status}`);
-  }
-
-  const data = await response.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) throw new Error("No response text from Gemini API");
-  return text.trim();
+  throw lastError || new Error("All candidate Gemini models failed to respond.");
 }
 
 // ---------- Live Talk & "Hey Macrish" Wake-Word Engine (Web Speech API STT & TTS) ----------
@@ -477,26 +737,72 @@ let micPermissionGranted = false;
 
 const WAKE_WORD_PATTERNS = [
   /\bhey\s+macrish\b/i,
+  /\bhey\s+mackrish\b/i,
   /\bhi\s+macrish\b/i,
   /\bhello\s+macrish\b/i,
   /\bok\s+macrish\b/i,
   /\bmacrish\b/i,
   /\bmackrish\b/i,
   /\bmac\s+rish\b/i,
+  /\bmack\s+rish\b/i,
   /\bmake\s+rich\b/i,
+  /\bmake\s+reach\b/i,
+  /\bmac\s+reach\b/i,
+  /\bmac\s+rich\b/i,
+  /\bhey\s+mac\b/i,
+  /\bhey\s+matrix\b/i,
+  /\bmatrix\b/i,
   /\bhey\s+jarvis\b/i,
   /\bjarvis\b/i,
+  /\bhey\s+assistant\b/i,
   /হে\s*ম্যাকরিশ/i,
   /এই\s*ম্যাকরিশ/i,
   /হেই\s*ম্যাকরিশ/i,
+  /হে\s*মেকরিশ/i,
+  /হেই\s*মেকরিশ/i,
+  /হাই\s*ম্যাকরিশ/i,
   /ম্যাকরিশ/i,
   /ম্যাক্রিশ/i,
-  /ম্যাক\s*রিশ/i
+  /মেকরিশ/i,
+  /মাকরিশ/i,
+  /ম্যাকরিস/i,
+  /মেকরিস/i,
+  /ম্যাক\s*রিশ/i,
+  /মেক\s*রিশ/i,
+  /মাক\s*রিশ/i,
+  /মেক\s*রীশ/i,
+  /ম্যাক\s*রীশ/i
 ];
+
+function playWakeUpChime() {
+  try {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === "suspended") {
+      audioCtx.resume();
+    }
+    const now = audioCtx.currentTime;
+    [587.33, 880.00].forEach((freq, i) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, now + i * 0.12);
+      gain.gain.setValueAtTime(0.001, now + i * 0.12);
+      gain.gain.exponentialRampToValueAtTime(0.2, now + i * 0.12 + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.12 + 0.35);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now + i * 0.12);
+      osc.stop(now + i * 0.12 + 0.4);
+    });
+  } catch (e) {}
+}
 
 function isWakeWordDetected(text) {
   if (!text) return false;
-  return WAKE_WORD_PATTERNS.some(p => p.test(text));
+  const clean = text.toLowerCase().trim();
+  return WAKE_WORD_PATTERNS.some(p => p.test(clean));
 }
 
 function stripWakeWord(text) {
@@ -558,8 +864,8 @@ function updateWakeWordUIState(statusOverride) {
   }
 
   if (statusOverride === "permission_denied") {
-    if (heroText) heroText.textContent = "⚠️ Mic Blocked: Tap to Allow";
-    if (hudText) hudText.textContent = "⚠️ Mic Blocked";
+    if (heroText) heroText.textContent = "🎙️ Tap to Enable Voice / Mic";
+    if (hudText) hudText.textContent = "🎙️ Tap to Allow Mic";
     if (heroBtn) heroBtn.classList.remove("active");
     if (hudBtn) hudBtn.classList.remove("active");
     return;
@@ -569,15 +875,15 @@ function updateWakeWordUIState(statusOverride) {
     if (heroBtn) heroBtn.classList.add("active");
     if (hudBtn) hudBtn.classList.add("active");
     if (heroText) {
-      heroText.textContent = isRecognitionRunning ? "👂 'Hey Macrish': Listening" : "👂 'Hey Macrish': Ready";
+      heroText.textContent = isRecognitionRunning ? "👂 'Hey Macrish': শুনছি (Listening)" : "👂 'Hey Macrish': সক্রিয় (Active)";
     }
     if (hudText) {
-      hudText.textContent = isRecognitionRunning ? "👂 Wake Word: Listening" : "👂 Wake Word: ON";
+      hudText.textContent = isRecognitionRunning ? "👂 'Hey Macrish': শুনছি" : "👂 Wake Word: ON";
     }
   } else {
     if (heroBtn) heroBtn.classList.remove("active");
     if (hudBtn) hudBtn.classList.remove("active");
-    if (heroText) heroText.textContent = "👂 'Hey Macrish': Paused";
+    if (heroText) heroText.textContent = "👂 'Hey Macrish': বন্ধ (OFF)";
     if (hudText) hudText.textContent = "👂 Wake Word: OFF";
   }
 }
@@ -587,17 +893,30 @@ function updateVoiceUI(listening, customMessage) {
   const badge = document.getElementById("liveListeningBadge");
   const micBtn = document.getElementById("hudVoiceMicBtn");
   const masterBtn = document.getElementById("liveTalkMasterBtn");
+  const floatingBtn = document.getElementById("floatingLiveTalkBtn");
+  const globalMicBtn = document.getElementById("globalCommandMicBtn");
   const equalizer = document.getElementById("hudEqualizer");
 
   if (micBtn) {
     micBtn.classList.toggle("listening", isListeningActive);
+  }
+  if (globalMicBtn) {
+    globalMicBtn.classList.toggle("listening", isListeningActive);
   }
 
   if (masterBtn) {
     masterBtn.classList.toggle("active", isLiveTalkMode);
     const btnText = masterBtn.querySelector(".live-talk-btn-text");
     if (btnText) {
-      btnText.textContent = isLiveTalkMode ? "🔴 Stop Live Talk" : "🎙️ Start Live Talk";
+      btnText.textContent = isLiveTalkMode ? "🔴 Stop Live Talk (কথা বন্ধ করুন)" : "🎙️ Start Live Voice Call (লাইভ কথা বলুন)";
+    }
+  }
+
+  if (floatingBtn) {
+    floatingBtn.classList.toggle("active", isLiveTalkMode || isListeningActive);
+    const label = floatingBtn.querySelector(".live-mic-label");
+    if (label) {
+      label.textContent = isLiveTalkMode ? "শুনছি..." : (isListeningActive ? "শুনছি..." : "কথা বলুন");
     }
   }
 
@@ -615,7 +934,7 @@ function updateVoiceUI(listening, customMessage) {
     } else if (isAwaitingCommand && isListeningActive) {
       badge.style.display = "flex";
       badge.innerHTML = `<span class="listening-wave-dot"></span><span>⚡ "Hey Macrish" active: Listening to your command...</span>`;
-    } else if (isListeningActive && !isWakeWordEnabled) {
+    } else if (isListeningActive) {
       badge.style.display = "flex";
       badge.innerHTML = `<span class="listening-wave-dot"></span><span>🎙️ Listening...</span>`;
     } else {
@@ -763,6 +1082,7 @@ async function handleSpeechTranscript(transcript) {
   // 3. Check for Wake Word detection ("Hey Macrish" / "হে ম্যাকরিশ"):
   if (isWakeWordDetected(transcript)) {
     triggerHaptic();
+    playWakeUpChime();
     openHud("chat");
 
     const command = stripWakeWord(transcript);
@@ -787,7 +1107,17 @@ async function handleSpeechTranscript(transcript) {
     return;
   }
 
-  // 4. If HUD is currently open and chat input was clicked:
+  // 4. If global quick command input is present:
+  const globalInput = document.getElementById("globalCommandInput");
+  if (globalInput && (document.activeElement === globalInput || !document.getElementById("macrishHudModal") || document.getElementById("macrishHudModal").hidden)) {
+    globalInput.value = transcript;
+    showAgentToast(`⚡ Macrish Voice: "${transcript}"`, 3500);
+    triggerHaptic();
+    await processConversationalInput(transcript);
+    return;
+  }
+
+  // 5. If HUD is currently open and chat input was clicked:
   const hudModal = document.getElementById("macrishHudModal");
   if (hudModal && !hudModal.hidden) {
     const hudInput = document.getElementById("hudChatInput");
@@ -1552,15 +1882,34 @@ function setupEvents() {
   document.getElementById("floatingArcBtn").addEventListener("click", () => openHud("chat"));
   const headerBtn = document.getElementById("headerMacrishBtn");
   if (headerBtn) headerBtn.addEventListener("click", () => openHud("chat"));
+
+  async function activateLiveVoiceTalk() {
+    openHud("chat");
+    if (!SpeechRecognition) {
+      alert("Live Talk voice recognition is not supported in this browser. Please use Safari on iPhone or Chrome on Desktop/Android.");
+      return;
+    }
+    triggerHaptic();
+    userHasInteracted = true;
+    if (!isLiveTalkMode) {
+      isLiveTalkMode = true;
+      await startRecognitionSafely(true);
+      const isBn = getVoiceLanguage().startsWith("bn");
+      const greeting = isBn ? "লাইভ টক সক্রিয় হয়েছে স্যার। বলুন, আমি শুনছি।" : "Live Talk active sir. Tell me anything.";
+      speakMacrishResponse(greeting);
+    }
+  }
+
+  const floatingLiveTalkBtn = document.getElementById("floatingLiveTalkBtn");
+  if (floatingLiveTalkBtn) {
+    floatingLiveTalkBtn.addEventListener("click", activateLiveVoiceTalk);
+  }
+
   const heroTalk = document.getElementById("heroTalkBtn");
   if (heroTalk) {
-    heroTalk.addEventListener("click", async () => {
-      openHud("chat");
-      if (SpeechRecognition && !micPermissionGranted) {
-        await startRecognitionSafely(true);
-      }
-    });
+    heroTalk.addEventListener("click", activateLiveVoiceTalk);
   }
+
   const heroWakeWordBtn = document.getElementById("heroWakeWordBtn");
   if (heroWakeWordBtn) {
     heroWakeWordBtn.addEventListener("click", async () => {
@@ -1569,11 +1918,13 @@ function setupEvents() {
         return;
       }
       triggerHaptic();
-      if (!isWakeWordEnabled) {
+      userHasInteracted = true;
+      if (!isRecognitionRunning) {
+        isWakeWordEnabled = true;
         setWakeWordActive(true);
         await startRecognitionSafely(true);
       } else {
-        setWakeWordActive(false);
+        setWakeWordActive(!isWakeWordEnabled);
       }
     });
   }
@@ -1646,7 +1997,30 @@ function setupEvents() {
   const geminiModelSelect = document.getElementById("geminiModelSelect");
   const activeModelBadge = document.getElementById("activeModelBadge");
 
+  function populateModelSelectDropdown() {
+    if (!geminiModelSelect) return;
+    const models = getStoredAvailableModels();
+    const current = getGeminiModel();
+    if (models && models.length > 0) {
+      geminiModelSelect.innerHTML = "";
+      models.forEach(m => {
+        const opt = document.createElement("option");
+        opt.value = m;
+        let label = m;
+        if (m === "gemini-2.5-flash") label = "🚀 Gemini 2.5 Flash (Ultra Fast & Deep Bangla)";
+        else if (m === "gemini-2.5-pro") label = "🧠 Gemini 2.5 Pro (State-of-the-Art Deep Reasoning)";
+        else if (m === "gemini-2.0-flash") label = "⚡ Gemini 2.0 Flash (Stable High Speed)";
+        else if (m.includes("flash")) label = `⚡ ${m}`;
+        else if (m.includes("pro")) label = `🧠 ${m}`;
+        opt.textContent = label;
+        if (m === current) opt.selected = true;
+        geminiModelSelect.appendChild(opt);
+      });
+    }
+  }
+
   function updateApiKeyUI() {
+    populateModelSelectDropdown();
     const savedKey = getGeminiApiKey();
     const currentModel = getGeminiModel();
 
@@ -1655,12 +2029,14 @@ function setupEvents() {
     }
 
     if (activeModelBadge) {
-      if (currentModel === "gemini-2.0-flash") {
-        activeModelBadge.textContent = "🚀 GEMINI 2.5 / 2.0 FLASH";
-      } else if (currentModel === "gemini-1.5-pro") {
-        activeModelBadge.textContent = "🧠 GEMINI 1.5 PRO";
+      if (currentModel === "gemini-2.5-pro") {
+        activeModelBadge.textContent = "🧠 GEMINI 2.5 PRO";
+      } else if (currentModel === "gemini-2.5-flash") {
+        activeModelBadge.textContent = "🚀 GEMINI 2.5 FLASH";
+      } else if (currentModel === "gemini-2.0-flash") {
+        activeModelBadge.textContent = "⚡ GEMINI 2.0 FLASH";
       } else {
-        activeModelBadge.textContent = "⚡ GEMINI 1.5 FLASH";
+        activeModelBadge.textContent = `⚡ ${currentModel.toUpperCase()}`;
       }
     }
 
@@ -1669,7 +2045,7 @@ function setupEvents() {
     }
 
     if (savedKey) {
-      const modelName = currentModel.includes("2.0") ? "Gemini 2.5 / 2.0 Flash" : (currentModel.includes("pro") ? "Gemini 1.5 Pro" : "Gemini 1.5 Flash");
+      const modelName = currentModel === "gemini-2.5-pro" ? "Gemini 2.5 Pro" : (currentModel.includes("2.5") ? "Gemini 2.5 Flash" : (currentModel.includes("2.0") ? "Gemini 2.0 Flash" : currentModel));
       if (apiKeyStatus) apiKeyStatus.textContent = `Status: ${modelName} Active & Verified (Online AI Mode)`;
       if (apiKeyStatusDot) apiKeyStatusDot.className = "api-status-indicator active";
       if (clearApiKeyBtn) clearApiKeyBtn.style.display = "inline-block";
@@ -1697,17 +2073,18 @@ function setupEvents() {
         return;
       }
 
-      const chosenModel = getGeminiModel();
-      if (apiKeyStatus) apiKeyStatus.textContent = `Status: Verifying key with Google AI...`;
+      if (apiKeyStatus) apiKeyStatus.textContent = `Status: Verifying key with Google AI (ListModels)...`;
       if (apiKeyStatusDot) apiKeyStatusDot.className = "api-status-indicator verifying";
       saveApiKeyBtn.disabled = true;
 
       try {
-        const res = await verifyGeminiApiKey(raw, chosenModel);
-        if (res.ok) {
+        const res = await verifyAndAutoConfigureGemini(raw);
+        if (res.success || res.ok) {
           updateApiKeyUI();
           triggerHaptic();
-          alert(`Success! Gemini API Key সফলভাবে ভেরিফাই ও সক্রিয় করা হয়েছে (${res.chosenModel})।`);
+          alert(`Success! Gemini API Key সফলভাবে ভেরিফাই ও সক্রিয় করা হয়েছে (অ্যাক্টিভ মডেল: ${res.activeModel || res.chosenModel})।`);
+        } else {
+          throw new Error(res.message || "ভেরিফিকেশন ব্যর্থ হয়েছে।");
         }
       } catch (err) {
         console.warn("API Verification failed:", err);
@@ -1771,10 +2148,13 @@ function setupEvents() {
         return;
       }
       triggerHaptic();
-      const nextState = !isWakeWordEnabled;
-      setWakeWordActive(nextState);
-      if (nextState) {
+      userHasInteracted = true;
+      if (!isRecognitionRunning) {
+        isWakeWordEnabled = true;
+        setWakeWordActive(true);
         await startRecognitionSafely(true);
+      } else {
+        setWakeWordActive(!isWakeWordEnabled);
       }
     });
   }
@@ -1786,6 +2166,7 @@ function setupEvents() {
         return;
       }
       triggerHaptic();
+      userHasInteracted = true;
       isLiveTalkMode = !isLiveTalkMode;
 
       if (isLiveTalkMode) {
@@ -1813,6 +2194,7 @@ function setupEvents() {
         return;
       }
       triggerHaptic();
+      userHasInteracted = true;
       if (isRecognitionRunning) {
         stopRecognitionSafely();
       } else {
@@ -1844,6 +2226,71 @@ function setupEvents() {
     input.value = "";
     await processConversationalInput(val);
   });
+
+  // Global AI Agent Command Bar Submission
+  const globalCmdForm = document.getElementById("globalCommandForm");
+  const globalCmdInput = document.getElementById("globalCommandInput");
+  if (globalCmdForm && globalCmdInput) {
+    globalCmdForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const val = globalCmdInput.value.trim();
+      if (!val) return;
+      globalCmdInput.value = "";
+      showAgentToast(`⚡ Processing: "${val}"...`, 3500);
+      triggerHaptic();
+      await processConversationalInput(val);
+    });
+  }
+
+  // Global AI Agent Microphone Button
+  const globalCmdMic = document.getElementById("globalCommandMicBtn");
+  if (globalCmdMic) {
+    globalCmdMic.addEventListener("click", async () => {
+      if (!SpeechRecognition) {
+        alert("Voice recognition is not supported in this browser. Please use Safari on iPhone or Chrome on Desktop/Android.");
+        return;
+      }
+      triggerHaptic();
+      userHasInteracted = true;
+      if (isRecognitionRunning) {
+        stopRecognitionSafely();
+      } else {
+        showAgentToast("🎙️ শুনছি... মুখে বলুন কী করতে হবে", 3000);
+        await startRecognitionSafely(true);
+      }
+    });
+  }
+
+  // Sync Habits to Daily Schedule Buttons
+  const syncHabitBtns = [
+    document.getElementById("globalQuickSyncBtn"),
+    document.getElementById("scheduleSyncHabitsBtn"),
+    document.getElementById("habitsSyncToScheduleBtn")
+  ];
+  syncHabitBtns.forEach(btn => {
+    if (btn) {
+      btn.addEventListener("click", () => {
+        triggerHaptic();
+        syncHabitsToSchedule(false);
+      });
+    }
+  });
+
+  // Global One-Time User Gesture for Audio Context & Speech Unlock
+  let userHasInteracted = false;
+  function initAudioOnFirstGesture() {
+    if (userHasInteracted) return;
+    userHasInteracted = true;
+    if (audioCtx && audioCtx.state === "suspended") {
+      audioCtx.resume().catch(() => {});
+    }
+    if (isWakeWordEnabled && !isRecognitionRunning) {
+      startRecognitionSafely(false);
+    }
+  }
+  window.addEventListener("click", initAudioOnFirstGesture, { passive: true });
+  window.addEventListener("touchstart", initAudioOnFirstGesture, { passive: true });
+  window.addEventListener("keydown", initAudioOnFirstGesture, { passive: true });
 
   // Prompt suggestion chips
   document.querySelectorAll(".prompt-chip").forEach(chip => {
